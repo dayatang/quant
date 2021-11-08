@@ -267,10 +267,10 @@ public class IbTradingContext implements TradingContext {
     ContractBuilder contractBuilder = new ContractBuilder();
 
     Contract contract = contractBuilder.build(symbol);
-    HistoryObserver historyObserver = new IbHistoryObserver(symbol);
+    IbHistoryObserver historyObserver = new IbHistoryObserver(symbol);
     controller.reqHistoricalData(contract, date, daysOfHistory, Types.DurationUnit.DAY,
         Types.BarSize._1_min, Types.WhatToShow.TRADES, false, false, historyObserver);
-    return ((IbHistoryObserver)historyObserver).observableDoubleSeries()
+    return historyObserver.observableDoubleSeries()
         .toBlocking()
         .first();
 
