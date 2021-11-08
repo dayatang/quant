@@ -3,7 +3,7 @@ package io.codera.quant.strategy.criterion;
 import com.ib.client.OrderStatus;
 import io.codera.quant.context.TradingContext;
 import io.codera.quant.exception.CriterionViolationException;
-import io.codera.quant.exception.NoOrderAvailable;
+import io.codera.quant.exception.NoOrderAvailableException;
 import io.codera.quant.strategy.Criterion;
 import java.util.List;
 import org.lst.trading.lib.model.Order;
@@ -30,7 +30,7 @@ public class OpenIbOrdersExistForAllSymbolsExitCriterion implements Criterion {
         if(order.getOrderStatus() != OrderStatus.Filled) {
           return false;
         }
-      } catch (NoOrderAvailable e) {
+      } catch (NoOrderAvailableException e) {
         return false;
       }
     }

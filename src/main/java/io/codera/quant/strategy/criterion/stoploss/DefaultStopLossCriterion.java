@@ -2,7 +2,7 @@ package io.codera.quant.strategy.criterion.stoploss;
 
 import io.codera.quant.context.TradingContext;
 import io.codera.quant.exception.CriterionViolationException;
-import io.codera.quant.exception.NoOrderAvailable;
+import io.codera.quant.exception.NoOrderAvailableException;
 import io.codera.quant.exception.PriceNotAvailableException;
 import io.codera.quant.strategy.Criterion;
 import java.util.List;
@@ -39,7 +39,7 @@ public class DefaultStopLossCriterion implements Criterion {
             + (order.getOpenPrice() * -order.getAmount());
         log.debug("Symbol P/L: {}", symbolPl);
         totalPl += symbolPl;
-      } catch (NoOrderAvailable | PriceNotAvailableException noOrderAvailable) {
+      } catch (NoOrderAvailableException | PriceNotAvailableException noOrderAvailable) {
         return false;
       }
     }

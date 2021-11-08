@@ -1,7 +1,7 @@
 package io.codera.quant.strategy.meanrevertion;
 
 import io.codera.quant.context.TradingContext;
-import io.codera.quant.exception.NoOrderAvailable;
+import io.codera.quant.exception.NoOrderAvailableException;
 import io.codera.quant.exception.PriceNotAvailableException;
 import io.codera.quant.strategy.AbstractStrategy;
 
@@ -49,12 +49,12 @@ public class BollingerBandsStrategy extends AbstractStrategy {
   public void closePosition() throws PriceNotAvailableException {
     try {
       tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(firstSymbol));
-    } catch (NoOrderAvailable noOrderAvailable) {
+    } catch (NoOrderAvailableException noOrderAvailable) {
       log.error("No order available for {}", firstSymbol);
     }
     try {
       tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(secondSymbol));
-    } catch (NoOrderAvailable noOrderAvailable) {
+    } catch (NoOrderAvailableException noOrderAvailable) {
       log.error("No order available for {}", secondSymbol);
     }
   }

@@ -4,7 +4,7 @@ package io.codera.quant.strategy.criterion.common;
 import com.ib.client.OrderStatus;
 import io.codera.quant.context.TradingContext;
 import io.codera.quant.exception.CriterionViolationException;
-import io.codera.quant.exception.NoOrderAvailable;
+import io.codera.quant.exception.NoOrderAvailableException;
 import io.codera.quant.strategy.Criterion;
 import java.util.List;
 
@@ -29,7 +29,7 @@ public class NoPendingOrdersCommonCriterion implements Criterion {
             && tradingContext.getLastOrderBySymbol(symbol).getOrderStatus() != OrderStatus.Filled) {
            return false;
         }
-      } catch (NoOrderAvailable noOrderAvailable) {}   // Do nothing here as there is not order
+      } catch (NoOrderAvailableException noOrderAvailable) {}   // Do nothing here as there is not order
     }
     return true;
   }

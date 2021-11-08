@@ -13,14 +13,14 @@ public interface AccountObserver extends IAccountHandler {
   Logger logger = LoggerFactory.getLogger(AccountObserver.class);
 
   default void accountValue(String account, String key, String value, String currency) {
+    final String format = String.format("account: %s, key: %s, value: %s, currency: %s",
+            account, key, value, currency);
     if(key.equals("NetLiquidation") && currency.equals("USD")) {
-      logger.debug(String.format("account: %s, key: %s, value: %s, currency: %s",
-          account, key, value, currency));
+      logger.debug(format);
       setNetValue(Double.valueOf(value));
     }
     if(key.equals("AvailableFunds") && currency.equals("USD")) {
-      logger.debug(String.format("account: %s, key: %s, value: %s, currency: %s",
-          account, key, value, currency));
+      logger.debug(format);
       setCashBalance(Double.valueOf(value));
     }
   }

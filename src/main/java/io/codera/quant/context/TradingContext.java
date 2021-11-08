@@ -1,6 +1,6 @@
 package io.codera.quant.context;
 
-import io.codera.quant.exception.NoOrderAvailable;
+import io.codera.quant.exception.NoOrderAvailableException;
 import io.codera.quant.exception.PriceNotAvailableException;
 import io.codera.quant.observers.MarketDataObserver;
 import java.time.Instant;
@@ -138,9 +138,9 @@ public interface TradingContext {
    *
    * @param symbol contract symbol
    * @return {@link Order} object
-   * @throws NoOrderAvailable if no orders available
+   * @throws NoOrderAvailableException if no orders available
    */
-  Order getLastOrderBySymbol(String symbol) throws NoOrderAvailable;
+  Order getLastOrderBySymbol(String symbol) throws NoOrderAvailableException;
 
   /**
    * Returns symbol change if available

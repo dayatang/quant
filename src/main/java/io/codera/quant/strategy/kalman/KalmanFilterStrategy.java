@@ -4,7 +4,7 @@ import io.codera.quant.config.ContractBuilder;
 import io.codera.quant.context.IbTradingContext;
 import io.codera.quant.context.TradingContext;
 import io.codera.quant.exception.CriterionViolationException;
-import io.codera.quant.exception.NoOrderAvailable;
+import io.codera.quant.exception.NoOrderAvailableException;
 import io.codera.quant.exception.PriceNotAvailableException;
 import io.codera.quant.strategy.AbstractStrategy;
 import io.codera.quant.strategy.Criterion;
@@ -67,12 +67,12 @@ public class KalmanFilterStrategy extends AbstractStrategy {
   public void closePosition() throws PriceNotAvailableException {
     try {
       tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(firstSymbol));
-    } catch (NoOrderAvailable noOrderAvailable) {
+    } catch (NoOrderAvailableException noOrderAvailable) {
       log.error("No order available for {}", firstSymbol);
     }
     try {
       tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(secondSymbol));
-    } catch (NoOrderAvailable noOrderAvailable) {
+    } catch (NoOrderAvailableException noOrderAvailable) {
       log.error("No order available for {}", secondSymbol);
     }
   }
@@ -241,7 +241,7 @@ public class KalmanFilterStrategy extends AbstractStrategy {
           return true;
         }
 
-      } catch (NoOrderAvailable noOrderAvailable) {
+      } catch (NoOrderAvailableException noOrderAvailable) {
         log.debug("No orders available for " + secondSymbol);
         return false;
       } catch (PriceNotAvailableException e) {

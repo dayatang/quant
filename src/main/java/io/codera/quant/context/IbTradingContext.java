@@ -2,21 +2,22 @@ package io.codera.quant.context;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.ib.client.*;
+import com.ib.client.Contract;
+import com.ib.client.OrderState;
+import com.ib.client.OrderStatus;
+import com.ib.client.OrderType;
+import com.ib.client.TickType;
+import com.ib.client.Types;
 import com.ib.controller.ApiController;
 import io.codera.quant.config.ContractBuilder;
-import io.codera.quant.exception.NoOrderAvailable;
+import io.codera.quant.exception.NoOrderAvailableException;
 import io.codera.quant.exception.PriceNotAvailableException;
-import io.codera.quant.observers.*;
-import org.lst.trading.lib.backtest.SimpleClosedOrder;
-import org.lst.trading.lib.backtest.SimpleOrder;
-import org.lst.trading.lib.model.ClosedOrder;
-import org.lst.trading.lib.model.Order;
-import org.lst.trading.lib.series.DoubleSeries;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import rx.Observable;
-import rx.Subscriber;
+import io.codera.quant.observers.HistoryObserver;
+import io.codera.quant.observers.IbAccountObserver;
+import io.codera.quant.observers.IbHistoryObserver;
+import io.codera.quant.observers.IbMarketDataObserver;
+import io.codera.quant.observers.IbOrderObserver;
+import io.codera.quant.observers.MarketDataObserver;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -29,6 +30,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.lst.trading.lib.backtest.SimpleClosedOrder;
+import org.lst.trading.lib.backtest.SimpleOrder;
+import org.lst.trading.lib.model.ClosedOrder;
+import org.lst.trading.lib.model.Order;
+import org.lst.trading.lib.series.DoubleSeries;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import rx.Observable;
+import rx.Subscriber;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -240,10 +250,10 @@ public class IbTradingContext implements TradingContext {
     this.orderType = orderType;
   }
 
-  public Order getLastOrderBySymbol(String symbol) throws NoOrderAvailable {
+  public Order getLastOrderBySymbol(String symbol) throws NoOrderAvailableException {
     checkArgument(symbol != null, "symbol is null");
     if(!ibOrders.containsKey(symbol)) {
-      throw new NoOrderAvailable();
+      throw new NoOrderAvailableException();
     }
     return ibOrders.get(symbol);
   }

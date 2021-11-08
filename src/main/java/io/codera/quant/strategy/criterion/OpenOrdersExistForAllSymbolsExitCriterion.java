@@ -2,7 +2,7 @@ package io.codera.quant.strategy.criterion;
 
 import io.codera.quant.context.TradingContext;
 import io.codera.quant.exception.CriterionViolationException;
-import io.codera.quant.exception.NoOrderAvailable;
+import io.codera.quant.exception.NoOrderAvailableException;
 import java.util.List;
 
 /**
@@ -20,7 +20,7 @@ public class OpenOrdersExistForAllSymbolsExitCriterion extends NoOpenOrdersExist
       try {
         tradingContext.getLastOrderBySymbol(symbol);
 
-      } catch (NoOrderAvailable e) {
+      } catch (NoOrderAvailableException e) {
         return false;
       }
     }

@@ -27,7 +27,7 @@ public class IbHistoryObserver implements HistoryObserver {
   }
 
   @Override
-  public void historicalData(Bar bar, boolean hasGaps) {
+  public void historicalData(Bar bar) {
     if(doubleSeries == null) {
       doubleSeries = new DoubleSeries(this.symbol);
     }

@@ -2,7 +2,7 @@ package io.codera.quant.strategy.meanrevertion;
 
 import io.codera.quant.context.TradingContext;
 import io.codera.quant.exception.CriterionViolationException;
-import io.codera.quant.exception.NoOrderAvailable;
+import io.codera.quant.exception.NoOrderAvailableException;
 import io.codera.quant.exception.PriceNotAvailableException;
 import io.codera.quant.strategy.Criterion;
 
@@ -43,7 +43,7 @@ public class ZScoreExitCriterion implements Criterion {
       }
     } catch (PriceNotAvailableException e) {
       return false;
-    } catch (NoOrderAvailable noOrderAvailable) {
+    } catch (NoOrderAvailableException noOrderAvailable) {
       noOrderAvailable.printStackTrace();
       return false;
     }

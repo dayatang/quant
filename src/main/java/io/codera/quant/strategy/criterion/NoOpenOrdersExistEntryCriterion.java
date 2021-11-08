@@ -2,7 +2,7 @@ package io.codera.quant.strategy.criterion;
 
 import io.codera.quant.context.TradingContext;
 import io.codera.quant.exception.CriterionViolationException;
-import io.codera.quant.exception.NoOrderAvailable;
+import io.codera.quant.exception.NoOrderAvailableException;
 import io.codera.quant.strategy.Criterion;
 import java.util.List;
 import org.lst.trading.lib.model.Order;
@@ -29,7 +29,7 @@ public class NoOpenOrdersExistEntryCriterion implements Criterion {
         if(order != null) {
           return false;
         }
-      } catch (NoOrderAvailable ignored) {
+      } catch (NoOrderAvailableException ignored) {
       }
     }
     return true;

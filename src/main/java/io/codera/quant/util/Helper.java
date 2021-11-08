@@ -100,7 +100,7 @@ public class Helper {
       Contract contract = contractBuilder.build(symbol);
       HistoryObserver historyObserver = new IbHistoryObserver(symbol);
       controller.reqHistoricalData(contract, date, daysOfHistory, Types.DurationUnit.DAY,
-          Types.BarSize._1_min, Types.WhatToShow.TRADES, false, historyObserver);
+          Types.BarSize._1_min, Types.WhatToShow.TRADES, false, false, historyObserver);
       doubleSeries.add(((IbHistoryObserver)historyObserver).observableDoubleSeries()
           .toBlocking()
           .first());

@@ -55,8 +55,8 @@ public class ContractBuilder {
   }
 
   /**
-   * If its a forex symbol, then for some strategies it is necessary to flip the price to
-   * understand the price based on USD (e.g. how much dollars is needed to buy 1 unit of currency
+   * If it's a forex symbol, then for some strategies it is necessary to flip the price to
+   * understand the price based on USD (e.g. how many dollars is needed to buy 1 unit of currency
    * in traded pair)
    *
    * @param symbol symbol name

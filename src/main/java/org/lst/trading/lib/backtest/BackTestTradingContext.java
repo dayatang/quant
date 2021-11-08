@@ -2,7 +2,7 @@ package org.lst.trading.lib.backtest;
 
 import com.google.common.collect.Maps;
 import io.codera.quant.context.TradingContext;
-import io.codera.quant.exception.NoOrderAvailable;
+import io.codera.quant.exception.NoOrderAvailableException;
 import io.codera.quant.exception.PriceNotAvailableException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -118,10 +118,10 @@ public class BackTestTradingContext implements TradingContext {
   }
 
   @Override
-  public Order getLastOrderBySymbol(String symbol) throws NoOrderAvailable {
+  public Order getLastOrderBySymbol(String symbol) throws NoOrderAvailableException {
     checkArgument(symbol != null, "symbol is null");
     if(orders == null || !orders.containsKey(symbol)) {
-      throw new NoOrderAvailable();
+      throw new NoOrderAvailableException();
     }
     return orders.get(symbol);
   }
