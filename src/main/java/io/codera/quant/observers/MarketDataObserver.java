@@ -1,7 +1,6 @@
 package io.codera.quant.observers;
 
 import com.ib.client.TickType;
-import com.ib.client.Types;
 import com.ib.controller.ApiController.ITopMktDataHandler;
 import rx.Observable;
 
@@ -11,6 +10,7 @@ import rx.Observable;
 public interface MarketDataObserver extends ITopMktDataHandler {
 
   String getSymbol();
+
   Observable<Price> priceObservable();
 
   @Override
@@ -22,12 +22,13 @@ public interface MarketDataObserver extends ITopMktDataHandler {
   @Override
   default void tickSnapshotEnd() {}
 
-  @Override
-  default void marketDataType(Types.MktDataType marketDataType) {}
+//  @Override
+//  default void marketDataType(Types.MktDataType marketDataType) {}
 
   class Price {
     private TickType tickType;
     private double price;
+
     Price(TickType tickType, double price) {
       this.tickType = tickType;
       this.price = price;

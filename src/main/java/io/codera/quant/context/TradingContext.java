@@ -124,14 +124,14 @@ public interface TradingContext {
    * @param amount amount
    * @return {@link Order} object
    */
-  Order order(String contractSymbol, boolean buy, int amount) throws PriceNotAvailableException;
+  Order placeOrder(String contractSymbol, boolean buy, int amount) throws PriceNotAvailableException;
 
   /**
    * Close existing order
    * @param order order to close
    * @return {@link ClosedOrder} object
    */
-  ClosedOrder close(Order order) throws PriceNotAvailableException;
+  ClosedOrder closeOrder(Order order) throws PriceNotAvailableException;
 
   /**
    * Returns last order of th symbol

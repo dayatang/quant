@@ -135,9 +135,11 @@
     </dependency>
     <!--Update based on your artifact version-->
     <dependency>
-      <groupId>tws-api</groupId>
-      <artifactId>tws-api</artifactId>
-      <version>9.72.17-SNAPSHOT</version>
+      <groupId>com.interactivebrokers</groupId>
+      <artifactId>twsapi</artifactId>
+      <version>9.76</version>
+      <scope>system</scope>
+      <systemPath>${user.home}/dev/IBJts/source/JavaClient/TwsApi_debug.jar</systemPath>
     </dependency>
   </dependencies>
 

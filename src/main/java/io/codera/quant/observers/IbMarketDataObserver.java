@@ -1,5 +1,6 @@
 package io.codera.quant.observers;
 
+import com.ib.client.TickAttrib;
 import com.ib.client.TickType;
 import com.ib.client.Types;
 import com.ib.controller.ApiController.ITopMktDataHandler;
@@ -26,7 +27,7 @@ public class IbMarketDataObserver implements MarketDataObserver {
   }
 
   @Override
-  public void tickPrice(TickType tickType, double price, int canAutoExecute) {
+  public void tickPrice(TickType tickType, double price, TickAttrib attribs) {
     if(price == -1.0) { // do not update price with bogus value when market is about ot be closed
       return;
     }
@@ -42,5 +43,16 @@ public class IbMarketDataObserver implements MarketDataObserver {
 
   public Observable<Price> priceObservable() {
     return priceSubject.asObservable();
+  }
+
+
+  @Override
+  public void marketDataType(int marketDataType) {
+
+  }
+
+  @Override
+  public void tickReqParams(int tickerId, double minTick, String bboExchange, int snapshotPermissions) {
+
   }
 }

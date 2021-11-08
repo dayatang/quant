@@ -84,7 +84,7 @@ public class BackTestTradingContext implements TradingContext {
     return mInstruments;
   }
 
-  @Override public Order order(String instrument, boolean buy, int amount) {
+  @Override public Order placeOrder(String instrument, boolean buy, int amount) {
 //    check(amount > 0);
     logger.info("OPEN {} in amount {}", instrument, (buy ? 1 : -1) * amount);
     double price = getLastPrice(instrument);
@@ -100,7 +100,7 @@ public class BackTestTradingContext implements TradingContext {
     return order;
   }
 
-  @Override public ClosedOrder close(Order order) {
+  @Override public ClosedOrder closeOrder(Order order) {
     logger.info("CLOSE {} in amount {}", order.getInstrument(), -order.getAmount());
 
     SimpleOrder simpleOrder = (SimpleOrder) order;

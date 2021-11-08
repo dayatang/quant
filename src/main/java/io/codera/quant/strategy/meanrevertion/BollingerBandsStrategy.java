@@ -37,23 +37,23 @@ public class BollingerBandsStrategy extends AbstractStrategy {
             / (tradingContext.getLastPrice(secondSymbol) + hedgeRatio * tradingContext.getLastPrice
             (firstSymbol));
 
-    tradingContext.order(firstSymbol, zScore.getLastCalculatedZScore() < 0,
+    tradingContext.placeOrder(firstSymbol, zScore.getLastCalculatedZScore() < 0,
         (int) (baseAmount * hedgeRatio) > 1 ? (int) (baseAmount * hedgeRatio) : 1);
     log.debug("Order of {} in amount {}", firstSymbol, (int) (baseAmount * hedgeRatio));
 
-    tradingContext.order(secondSymbol, zScore.getLastCalculatedZScore() > 0, (int) baseAmount);
+    tradingContext.placeOrder(secondSymbol, zScore.getLastCalculatedZScore() > 0, (int) baseAmount);
     log.debug("Order of {} in amount {}", secondSymbol, (int) baseAmount);
   }
 
   @Override
   public void closePosition() throws PriceNotAvailableException {
     try {
-      tradingContext.close(tradingContext.getLastOrderBySymbol(firstSymbol));
+      tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(firstSymbol));
     } catch (NoOrderAvailable noOrderAvailable) {
       log.error("No order available for {}", firstSymbol);
     }
     try {
-      tradingContext.close(tradingContext.getLastOrderBySymbol(secondSymbol));
+      tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(secondSymbol));
     } catch (NoOrderAvailable noOrderAvailable) {
       log.error("No order available for {}", secondSymbol);
     }

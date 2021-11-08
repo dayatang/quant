@@ -164,7 +164,7 @@ public class BackTest {
 
   private void finish() {
     for (SimpleOrder order : new ArrayList<>(mContext.mOrders)) {
-      mContext.close(order);
+      mContext.closeOrder(order);
     }
 
     // TODO (replace below code with BackTest results implementation

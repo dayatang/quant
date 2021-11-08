@@ -57,21 +57,21 @@ public class KalmanFilterStrategy extends AbstractStrategy {
 
   public void openPosition() throws PriceNotAvailableException {
 
-    tradingContext.order(secondSymbol, cointegration.getError() < 0, (int) baseAmount);
+    tradingContext.placeOrder(secondSymbol, cointegration.getError() < 0, (int) baseAmount);
     log.debug("Order of {} in amount {}", secondSymbol, (int)baseAmount);
 
-    tradingContext.order(firstSymbol, cointegration.getError() > 0, (int) (baseAmount * beta));
+    tradingContext.placeOrder(firstSymbol, cointegration.getError() > 0, (int) (baseAmount * beta));
     log.debug("Order of {} in amount {}", firstSymbol, (int) (baseAmount * beta));
   }
 
   public void closePosition() throws PriceNotAvailableException {
     try {
-      tradingContext.close(tradingContext.getLastOrderBySymbol(firstSymbol));
+      tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(firstSymbol));
     } catch (NoOrderAvailable noOrderAvailable) {
       log.error("No order available for {}", firstSymbol);
     }
     try {
-      tradingContext.close(tradingContext.getLastOrderBySymbol(secondSymbol));
+      tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(secondSymbol));
     } catch (NoOrderAvailable noOrderAvailable) {
       log.error("No order available for {}", secondSymbol);
     }

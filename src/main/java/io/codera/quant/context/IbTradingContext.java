@@ -64,7 +64,9 @@ public class IbTradingContext implements TradingContext {
 
   private static final Logger log = LoggerFactory.getLogger(IbTradingContext.class);
 
-  private IbTradingContext(ApiController controller, ContractBuilder contractBuilder, int leverage,
+  private IbTradingContext(ApiController controller,
+                           ContractBuilder contractBuilder,
+                           int leverage,
                            OrderType orderType) {
     this.controller = controller;
     this.contractBuilder = contractBuilder;
@@ -72,9 +74,10 @@ public class IbTradingContext implements TradingContext {
     this.orderType = orderType;
   }
 
-  public IbTradingContext(ApiController controller, ContractBuilder contractBuilder,
-                          OrderType orderType, int leverage)
-      throws ClassNotFoundException, SQLException {
+  public IbTradingContext(ApiController controller,
+                          ContractBuilder contractBuilder,
+                          OrderType orderType,
+                          int leverage) {
     this(controller, contractBuilder, leverage, orderType);
     this.contracts = Lists.newArrayList();
     this.contractPrices = Maps.newConcurrentMap();
@@ -82,17 +85,19 @@ public class IbTradingContext implements TradingContext {
     this.observers = Maps.newConcurrentMap();
     this.ibContracts = Maps.newConcurrentMap();
     this.ibOrders = Maps.newConcurrentMap();
-    AccountObserver accountObserver = new IbAccountObserver(this);
-    ((IbAccountObserver)accountObserver)
+    IbAccountObserver accountObserver = new IbAccountObserver(this);
+    accountObserver
         .observableCashBalance().subscribe(aDouble -> availableFunds = aDouble);
-    ((IbAccountObserver)accountObserver)
+    accountObserver
         .observableNetValue().subscribe(aDouble -> netValue = aDouble);
     controller.reqAccountUpdates(true, "", accountObserver);
   }
 
-  public IbTradingContext(ApiController controller, ContractBuilder contractBuilder,
-                          OrderType orderType, Connection connection, int leverage)
-      throws ClassNotFoundException, SQLException {
+  public IbTradingContext(ApiController controller,
+                          ContractBuilder contractBuilder,
+                          OrderType orderType,
+                          Connection connection,
+                          int leverage) {
     this(controller, contractBuilder, orderType, leverage);
     this.connection = connection;
   }
@@ -141,7 +146,7 @@ public class IbTradingContext implements TradingContext {
     Contract contract = contractBuilder.build(contractSymbol);
     ibContracts.put(contractSymbol, contract);
 
-    controller.reqTopMktData(contract, "", false, marketDataObserver);
+    controller.reqTopMktData(contract, "", false, false, marketDataObserver);
 
     marketDataObserver.priceObservable().subscribe(new Subscriber<MarketDataObserver.Price>() {
       @Override
@@ -199,7 +204,7 @@ public class IbTradingContext implements TradingContext {
   }
 
   @Override
-  public Order order(String contractSymbol, boolean buy, int amount)
+  public Order placeOrder(String contractSymbol, boolean buy, int amount)
       throws PriceNotAvailableException {
     checkArgument(contractSymbol != null, "contractSymbol is null");
 
@@ -218,7 +223,7 @@ public class IbTradingContext implements TradingContext {
   }
 
   @Override
-  public ClosedOrder close(Order order) throws PriceNotAvailableException {
+  public ClosedOrder closeOrder(Order order) throws PriceNotAvailableException {
     checkArgument(order != null, "order is null");
 
     log.debug("Amount taken from {} order that isLong {} : {}", order.getInstrument(),
@@ -264,7 +269,7 @@ public class IbTradingContext implements TradingContext {
     Contract contract = contractBuilder.build(symbol);
     HistoryObserver historyObserver = new IbHistoryObserver(symbol);
     controller.reqHistoricalData(contract, date, daysOfHistory, Types.DurationUnit.DAY,
-        Types.BarSize._1_min, Types.WhatToShow.TRADES, false, historyObserver);
+        Types.BarSize._1_min, Types.WhatToShow.TRADES, false, false, historyObserver);
     return ((IbHistoryObserver)historyObserver).observableDoubleSeries()
         .toBlocking()
         .first();
@@ -280,7 +285,7 @@ public class IbTradingContext implements TradingContext {
     Contract contract = contractBuilder.build(symbol);
     HistoryObserver historyObserver = new IbHistoryObserver(symbol);
     controller.reqHistoricalData(contract, date, numberOfMinutes * 60, Types.DurationUnit.SECOND,
-        Types.BarSize._1_min, Types.WhatToShow.TRADES, false, historyObserver);
+        Types.BarSize._1_min, Types.WhatToShow.TRADES, false, false, historyObserver);
 
     DoubleSeries history = ((IbHistoryObserver) historyObserver).observableDoubleSeries()
         .toBlocking()
@@ -288,7 +293,7 @@ public class IbTradingContext implements TradingContext {
     // We might need to pull history for last day if time of request is after market is closed
     if(history.size() == 0 || history.size() < numberOfMinutes) {
       controller.reqHistoricalData(contract, date, 1, Types.DurationUnit.DAY,
-          Types.BarSize._1_min, Types.WhatToShow.TRADES, false, historyObserver);
+          Types.BarSize._1_min, Types.WhatToShow.TRADES, false, false, historyObserver);
 
       history = ((IbHistoryObserver) historyObserver).observableDoubleSeries()
           .toBlocking()
@@ -300,8 +305,7 @@ public class IbTradingContext implements TradingContext {
     return history;
   }
 
-  private Observable<OrderState> submitIbOrder(String contractSymbol, boolean buy, int amount,
-                                               double price) {
+  private Observable<OrderState> submitIbOrder(String contractSymbol, boolean buy, int amount, double price) {
     com.ib.client.Order ibOrder = new com.ib.client.Order();
 
     if(buy) {
@@ -317,12 +321,12 @@ public class IbTradingContext implements TradingContext {
     }
     ibOrder.totalQuantity(Math.abs(amount));
 
-    OrderObserver orderObserver = new IbOrderObserver();
+    IbOrderObserver orderObserver = new IbOrderObserver();
     log.debug("Sending order for {} in amount of {}", contractSymbol, amount);
 
     controller.placeOrModifyOrder(ibContracts.get(contractSymbol), ibOrder, orderObserver);
 
-    return ((IbOrderObserver)orderObserver).observableOrderState();
+    return orderObserver.observableOrderState();
   }
 
   public class IbOrder extends SimpleOrder {
