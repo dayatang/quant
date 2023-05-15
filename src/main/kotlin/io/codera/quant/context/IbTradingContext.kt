@@ -34,14 +34,14 @@ import java.util.concurrent.atomic.AtomicInteger
 class IbTradingContext private constructor(
     private val controller: ApiController,
     private val contractBuilder: ContractBuilder,
-    private override val leverage: Int,
+    override val leverage: Double,
     private var orderType: OrderType
 ) : TradingContext {
-    private override var contracts: MutableList<String>
-    private var ibContracts: MutableMap<String?, Contract?>
-    private var ibOrders: MutableMap<String?, Order>
-    private var contractPrices: MutableMap<String?, MutableMap<TickType?, Double>>
-    private var observers: MutableMap<String?, MarketDataObserver>
+    override var contracts: MutableList<String> = ArrayList()
+    private var ibContracts: MutableMap<String, Contract> = HashMap()
+    private var ibOrders: MutableMap<String, Order> = HashMap()
+    private var contractPrices: MutableMap<String, MutableMap<TickType, Double>> = HashMap()
+    private var observers: MutableMap<String, MarketDataObserver> = HashMap()
     private val orderId = AtomicInteger(0)
     override var availableFunds = 0.0
         private set
@@ -54,7 +54,7 @@ class IbTradingContext private constructor(
         contractBuilder: ContractBuilder,
         orderType: OrderType,
         leverage: Int
-    ) : this(controller, contractBuilder, leverage, orderType) {
+    ) : this(controller, contractBuilder, leverage.toDouble(), orderType) {
         contracts = Lists.newArrayList()
         contractPrices = Maps.newConcurrentMap()
         observers = Maps.newConcurrentMap()
@@ -79,7 +79,7 @@ class IbTradingContext private constructor(
     }
 
     @Throws(PriceNotAvailableException::class)
-    override fun getLastPrice(contract: String?): Double {
+    override fun getLastPrice(contract: String): Double {
         Preconditions.checkArgument(contract != null, "contract is null")
         if (!contractPrices.containsKey(contract) ||
             !contractPrices[contract]!!.containsKey(TickType.ASK)
@@ -118,7 +118,7 @@ class IbTradingContext private constructor(
         val contract = contractBuilder.build(contractSymbol)
         ibContracts[contractSymbol] = contract
         controller.reqTopMktData(contract, "", false, false, marketDataObserver)
-        marketDataObserver.priceObservable().subscribe(object : Subscriber<Price?>() {
+        marketDataObserver.priceObservable().subscribe(object : Subscriber<Price>() {
             override fun onCompleted() {}
             override fun onError(throwable: Throwable) {}
             override fun onNext(price: Price) {

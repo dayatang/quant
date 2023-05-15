@@ -75,14 +75,14 @@ class BackTestTradingContext : TradingContext {
 
     override fun closeOrder(order: Order): ClosedOrder {
         logger.info("CLOSE {} in amount {}", order.instrument, -order.amount)
-        val simpleOrder = order as SimpleOrder?
+        val simpleOrder = order as SimpleOrder
         mOrders.remove(simpleOrder)
         val price = getLastPrice(order.instrument)
         val closedOrder = SimpleClosedOrder(simpleOrder, price, time)
         mClosedOrders.add(closedOrder)
         mClosedPl += closedOrder.pl
         mCommissions += calculateCommission(order)
-        if (orders != null) {
+        if (orders.isNotEmpty()) {
             orders.remove(order.instrument)
         }
         return closedOrder
