@@ -9,17 +9,17 @@ import java.util.*
 /**
  * Utility methods used across math package.
  */
-class MathUtil {
+object MathUtil {
     fun trimr(arr: DoubleArray, n1: Int, n2: Int): DoubleArray {
         Preconditions.checkArgument(n1 + n2 < arr.size, "Attempting to trim too much in trimr")
         val h2 = arr.size - n2
-        return Arrays.copyOfRange(arr, n1, h2)
+        return arr.copyOfRange(n1, h2)
     }
 
     fun trimr(arr: Array<DoubleArray>, n1: Int, n2: Int): Array<DoubleArray> {
         Preconditions.checkArgument(n1 + n2 < arr.size, "Attempting to trim too much in trimr")
         val h2 = arr.size - n2
-        return Arrays.copyOfRange(arr, n1, h2)
+        return arr.copyOfRange(n1, h2)
     }
 
     fun trimr(m: RealMatrix, n1: Int, n2: Int): RealMatrix {

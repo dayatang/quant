@@ -49,8 +49,8 @@ class Config(private val host: String, private val port: Int, private val symbol
 
     @Provides
     fun strategy(tradingContext: TradingContext): Strategy {
-        val contracts = Arrays.asList(*symbolList.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
-        val zScore = ZScore(20, MathUtil())
+        val contracts = listOf(*symbolList.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
+        val zScore = ZScore(20)
         val strategy: Strategy = BollingerBandsStrategy(
             contracts[0],
             contracts[1],

@@ -1,5 +1,6 @@
 package io.codera.quant.observers
 
+import com.ib.client.Decimal
 import rx.Observable
 import rx.subjects.PublishSubject
 
@@ -24,7 +25,7 @@ class IbAccountObserver : AccountObserver {
         netValueSubject.onNext(netValue)
     }
 
-    override fun updateSymbolPosition(symbol: String?, position: Double) {
+    override fun updateSymbolPosition(symbol: String, position: Decimal) {
         AccountObserver.Companion.logger.info("{} position: {}", symbol, position)
     }
 

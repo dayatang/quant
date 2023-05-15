@@ -83,20 +83,8 @@ open class TimeSeries<T> : Iterable<TimeSeries.Entry<T>> {
         return mData[index]
     }
 
-    interface MergeFunction<T, F> {
-        fun merge(t1: T, t2: T): F
-    }
-
-    interface MergeFunction2<T1, T2, F> {
-        fun merge(t1: T1, t2: T2): F
-    }
-
     fun <F> map(f: (T) -> F): TimeSeries<F> {
-        val newEntries: MutableList<Entry<F>> = ArrayList(size())
-        for (entry in mData) {
-            newEntries.add(Entry(f(entry.item), entry.instant))
-        }
-        return TimeSeries(newEntries)
+        return TimeSeries(mData.map{ Entry(f(it.item), it.instant) }.toMutableList())
     }
 
     val isAscending: Boolean
@@ -179,8 +167,5 @@ open class TimeSeries<T> : Iterable<TimeSeries.Entry<T>> {
             return TimeSeries(newEntries)
         }
 
-        fun <T, F> merge(t1: TimeSeries<T>, t2: TimeSeries<T>, f: (T, T) -> F): TimeSeries<F> {
-            return merge(t1, t2) { a, b -> f(a, b) }
-        }
     }
 }

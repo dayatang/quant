@@ -31,7 +31,6 @@ class IbConnectionHandler : IConnectionHandler {
     override fun message(id: Int, errorCode: Int, errorMsg: String, advancedOrderRejectJson: String?) {
         logger.info("Message id: {}, errorCode: {}, errorMsg: {}， advancedOrderRejectJson：{}",
             id, errorCode, errorMsg, advancedOrderRejectJson)
-        TODO("Not yet implemented")
     }
 
     override fun show(string: String) {

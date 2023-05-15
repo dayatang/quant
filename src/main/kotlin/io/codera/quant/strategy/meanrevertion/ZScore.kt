@@ -15,7 +15,6 @@ class ZScore(
     private val lookback: Int
 ) {
     private var historyArraySize = 0
-    private var u: MathUtil = MathUtil()
     private var x: DoubleArray? = null
     private var y: DoubleArray? = null
     private var yPort: DoubleArray? = null
@@ -62,7 +61,7 @@ class ZScore(
                 y!![lookback - 1] = secondSymbolHistory[i]
                 val xMatrix = MatrixUtils.createRealMatrix(lookback, 2)
                 xMatrix.setColumn(0, x)
-                xMatrix.setColumn(1, u.ones(lookback))
+                xMatrix.setColumn(1, MathUtil.ones(lookback))
                 val ols = OLSMultipleLinearRegression(0.0)
                 ols.isNoIntercept = true
                 ols.newSampleData(y, xMatrix.data)
@@ -78,7 +77,7 @@ class ZScore(
         y!![lookback - 1] = secondSymbolPrice
         val xMatrix = MatrixUtils.createRealMatrix(lookback, 2)
         xMatrix.setColumn(0, x)
-        xMatrix.setColumn(1, u.ones(lookback))
+        xMatrix.setColumn(1, MathUtil.ones(lookback))
         val ols = OLSMultipleLinearRegression(0.0)
         ols.isNoIntercept = true
         ols.newSampleData(y, xMatrix.data)

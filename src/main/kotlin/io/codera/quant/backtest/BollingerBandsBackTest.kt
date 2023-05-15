@@ -39,7 +39,7 @@ object BollingerBandsBackTest {
         val backTest = BackTest(deposit.toDouble(), priceSeries)
         backTest.leverage = 4.0
         val tradingContext: TradingContext = BackTestTradingContext()
-        val zScore = ZScore(20, MathUtil())
+        val zScore = ZScore(20)
         val bollingerBandsStrategy: Strategy = BollingerBandsStrategy(
             contracts[0],
             contracts[1],

@@ -14,7 +14,7 @@ open class SimpleClosedOrder(
         get() = openOrder.id
     override val isLong: Boolean
         get() = openOrder.isLong
-    override val amount: Int
+    override val amount: Double
         get() = openOrder.amount
     override val openPrice: Double
         get() = openOrder.openPrice

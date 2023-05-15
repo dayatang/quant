@@ -20,7 +20,7 @@ class TestConfig : AbstractModule() {
 
     @Provides
     fun apiController(): ApiController {
-        val controller = ApiController(IbConnectionHandler(), { valueOf: String? -> }) { valueOf: String? -> }
+        val controller = ApiController(IbConnectionHandler(), { _: String -> }) { _: String -> }
         controller.connect(HOST, PORT, 0, null)
         return controller
     }
@@ -38,6 +38,6 @@ class TestConfig : AbstractModule() {
 
     companion object {
         private const val HOST = "localhost"
-        private const val PORT = 7497
+        private const val PORT = 4002
     }
 }

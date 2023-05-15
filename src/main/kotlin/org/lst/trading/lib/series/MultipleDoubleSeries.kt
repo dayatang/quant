@@ -1,8 +1,6 @@
 package org.lst.trading.lib.series
 
-import org.lst.trading.lib.series.TimeSeries.MergeFunction2
 import java.util.*
-import java.util.function.Function
 import java.util.stream.Collectors
 
 class MultipleDoubleSeries : TimeSeries<MutableList<Double>> {

@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory
  *
  */
 interface AccountObserver : IAccountHandler {
-    override fun accountValue(account: String, key: String, value: String, currency: String) {
+    override fun accountValue(account: String, key: String, value: String, currency: String?) {
         val format = String.format(
             "account: %s, key: %s, value: %s, currency: %s",
             account, key, value, currency

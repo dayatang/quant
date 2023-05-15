@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList
 import com.google.inject.Inject
 import io.codera.quant.config.GuiceJUnit4Runner
 import io.codera.quant.context.TradingContext
-import io.codera.quant.util.MathUtil
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,31 +16,28 @@ import java.net.URISyntaxException
  */
 @RunWith(GuiceJUnit4Runner::class)
 class ZScoreTest {
-    @Inject
-    private val tradingContext: TradingContext? = null
 
-    @get:Throws(Exception::class)
-    @get:Test
-    val test: Unit
-        // This test requires a working IB TWS.
-        get() {
+    @Inject
+    private lateinit var tradingContext: TradingContext
+
+    @Test
+    fun getTest() {
             for (symbol in SYMBOLS) {
-                tradingContext!!.addContract(symbol)
+                tradingContext.addContract(symbol)
             }
-            val firstSymbolHistory = tradingContext!!.getHistoryInMinutes(SYMBOLS[0], MINUTES_OF_HISTORY)
+            val firstSymbolHistory = tradingContext.getHistoryInMinutes(SYMBOLS[0], MINUTES_OF_HISTORY)
             val secondSymbolHistory = tradingContext.getHistoryInMinutes(SYMBOLS[1], MINUTES_OF_HISTORY)
-            val zScore = ZScore(firstSymbolHistory!!.toArray(), secondSymbolHistory!!.toArray(), LOOKBACK, MathUtil())
+            val zScore = ZScore(firstSymbolHistory.toArray(), secondSymbolHistory.toArray(), LOOKBACK)
             println(zScore[114.7, 10.30])
         }
 
-    @get:Throws(IOException::class, URISyntaxException::class)
-    @get:Test
-    val testUnit: Unit
-        get() {
+    @Throws(IOException::class, URISyntaxException::class)
+    @Test
+    fun getTestUnit() {
             val finance = YahooFinance()
             val gld = finance.readCsvToDoubleSeriesFromResource("GLD.csv", SYMBOLS[0])
             val uso = finance.readCsvToDoubleSeriesFromResource("USO.csv", SYMBOLS[1])
-            val zScore = ZScore(gld!!.toArray(), uso!!.toArray(), LOOKBACK, MathUtil())
+            val zScore = ZScore(gld.toArray(), uso.toArray(), LOOKBACK)
             Assert.assertEquals("Failed", -1.0102216127916113, zScore[58.33, 66.35], 0.0)
             Assert.assertEquals("Failed", -0.9692409006953596, zScore[57.73, 67.0], 0.0)
             Assert.assertEquals("Failed", -0.9618287583543594, zScore[57.99, 66.89], 0.0)
