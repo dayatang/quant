@@ -1,5 +1,6 @@
 package io.codera.quant.observers
 
+import com.ib.client.Decimal
 import com.ib.client.TickAttrib
 import com.ib.client.TickType
 import com.ib.controller.ApiController.ITopMktDataHandler
@@ -14,11 +15,8 @@ import rx.subjects.PublishSubject
  * access to data (price) feed
  */
 class IbMarketDataObserver(override val symbol: String) : MarketDataObserver {
-    private val priceSubject: PublishSubject<Price?>
 
-    init {
-        priceSubject = PublishSubject.create()
-    }
+    private val priceSubject: PublishSubject<Price> = PublishSubject.create()
 
     override fun tickPrice(tickType: TickType, price: Double, attribs: TickAttrib) {
         if (price == -1.0) { // do not update price with bogus value when market is about ot be closed
@@ -28,8 +26,12 @@ class IbMarketDataObserver(override val symbol: String) : MarketDataObserver {
         priceSubject.onNext(Price(tickType, realPrice))
     }
 
-    override fun priceObservable(): Observable<Price?> {
+    override fun priceObservable(): Observable<Price> {
         return priceSubject.asObservable()
+    }
+
+    override fun tickSize(tickType: TickType, size: Decimal) {
+        TODO("Not yet implemented")
     }
 
     override fun marketDataType(marketDataType: Int) {}

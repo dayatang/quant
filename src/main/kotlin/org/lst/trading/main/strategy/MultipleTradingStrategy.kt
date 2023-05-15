@@ -14,7 +14,7 @@ class MultipleTradingStrategy : TradingStrategy {
         return mStrategies.size
     }
 
-    override fun onStart(context: TradingContext?) {
+    override fun onStart(context: TradingContext) {
         mStrategies.forEach(Consumer { t: TradingStrategy -> t.onStart(context) })
     }
 

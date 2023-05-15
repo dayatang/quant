@@ -1,5 +1,6 @@
 package io.codera.quant.observers
 
+import com.ib.client.Decimal
 import com.ib.client.OrderStatus
 import com.ib.controller.ApiController.IOrderHandler
 import org.slf4j.LoggerFactory
@@ -8,15 +9,16 @@ import org.slf4j.LoggerFactory
  *
  */
 interface OrderObserver : IOrderHandler {
-    fun orderStatus(
-        status: OrderStatus?, filled: Double, remaining: Double, avgFillPrice: Double,
-        permId: Long, parentId: Int, lastFillPrice: Double, clientId: Int, whyHeld: String?
+
+    override fun orderStatus(
+        status: OrderStatus, filled: Decimal, remaining: Decimal, avgFillPrice: Double, permId: Int,
+        parentId: Int, lastFillPrice: Double, clientId: Int, whyHeld: String?, mktCapPrice: Double
     ) {
         logger.info(
-            "Order status update: OrderStatus = {}, filled {}, remaining {}, avgFillPrice =" +
-                    " {}, permId = {}, parentId = {}, lastFillPrice = {}, clientId = {}, whyHeld = {}",
+            "Order status update: OrderStatus = {}, filled {}, remaining {}, avgFillPrice = {}, permId = {}, " +
+                    " parentId = {}, lastFillPrice = {}, clientId = {}, whyHeld = {}, mktCapPrice = {}",
             status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId,
-            whyHeld
+            whyHeld, mktCapPrice
         )
     }
 

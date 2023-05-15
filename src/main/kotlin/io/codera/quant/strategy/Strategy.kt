@@ -142,7 +142,6 @@ interface Strategy {
      *
      * @return
      */
-    @JvmField
     val tradingContext: TradingContext
 
     /**

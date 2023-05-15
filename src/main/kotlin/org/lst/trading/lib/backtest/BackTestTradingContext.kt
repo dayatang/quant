@@ -62,7 +62,7 @@ class BackTestTradingContext : TradingContext {
         throw UnsupportedOperationException()
     }
 
-    override fun placeOrder(instrument: String, buy: Boolean, amount: Int): Order {
+    override fun placeOrder(instrument: String, buy: Boolean, amount: Double): Order {
 //    check(amount > 0);
         logger.info("OPEN {} in amount {}", instrument, (if (buy) 1 else -1) * amount)
         val price = getLastPrice(instrument)

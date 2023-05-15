@@ -83,7 +83,7 @@ object Helper {
         val formatter = DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss")
         val date = LocalDateTime.now().format(formatter)
         val contractBuilder = ContractBuilder()
-        val doubleSeries: MutableList<DoubleSeries?> = Lists.newArrayList()
+        val doubleSeries: MutableList<DoubleSeries> = Lists.newArrayList()
         for (symbol in symbols) {
             val contract = contractBuilder.build(symbol)
             val historyObserver: HistoryObserver = IbHistoryObserver(symbol)

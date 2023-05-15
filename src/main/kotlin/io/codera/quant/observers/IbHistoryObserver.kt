@@ -13,7 +13,7 @@ import java.time.Instant
  *
  */
 class IbHistoryObserver(private val symbol: String) : HistoryObserver {
-    private val priceSubject: PublishSubject<DoubleSeries?>
+    private val priceSubject: PublishSubject<DoubleSeries>
     private var doubleSeries: DoubleSeries? = null
 
     init {
@@ -42,7 +42,7 @@ class IbHistoryObserver(private val symbol: String) : HistoryObserver {
         logger.debug("End of historic data for $symbol")
     }
 
-    fun observableDoubleSeries(): Observable<DoubleSeries?> {
+    fun observableDoubleSeries(): Observable<DoubleSeries> {
         return priceSubject.asObservable()
     }
 

@@ -6,7 +6,7 @@ import java.time.Instant
 
 interface Order {
     val id: Int
-    val amount: Int
+    val amount: Double
     val openPrice: Double
     val openInstant: Instant
     val instrument: String
@@ -20,7 +20,7 @@ interface Order {
         get() = if (isLong) 1 else -1
 
     fun calculatePl(currentPrice: Double): Double {
-        return if (instrument!!.contains("=F")) {
+        return if (instrument.contains("=F")) {
             amount * (currentPrice - openPrice) *
                     getFutureMultiplier(instrument)!!
         } else amount * (currentPrice - openPrice)

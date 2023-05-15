@@ -8,5 +8,5 @@ open class SimpleOrder(
     override var instrument: String,
     override var openInstant: Instant,
     override var openPrice: Double,
-    override var amount: Int
+    override var amount: Double
 ) : Order

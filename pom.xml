@@ -185,9 +185,7 @@
     <dependency>
       <groupId>com.interactivebrokers</groupId>
       <artifactId>twsapi</artifactId>
-      <version>9.76</version>
-      <scope>system</scope>
-      <systemPath>${user.home}/dev/apis/IBJts/source/JavaClient/TwsApi_debug.jar</systemPath>
+      <version>10.19.01</version>
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>

@@ -17,8 +17,10 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * Kalman filter strategy
  */
 class KalmanFilterStrategy(
-    private val firstSymbol: String, private val secondSymbol: String,
-    tradingContext: TradingContext, private val cointegration: Cointegration
+    private val firstSymbol: String,
+    private val secondSymbol: String,
+    tradingContext: TradingContext,
+    private val cointegration: Cointegration
 ) : AbstractStrategy(tradingContext) {
     private var beta = 0.0
     private var baseAmount = 0.0
@@ -47,10 +49,10 @@ class KalmanFilterStrategy(
 
     @Throws(PriceNotAvailableException::class)
     override fun openPosition() {
-        tradingContext.placeOrder(secondSymbol, cointegration.error < 0, baseAmount.toInt())
-        Strategy.Companion.log.debug("Order of {} in amount {}", secondSymbol, baseAmount.toInt())
-        tradingContext.placeOrder(firstSymbol, cointegration.error > 0, (baseAmount * beta).toInt())
-        Strategy.Companion.log.debug("Order of {} in amount {}", firstSymbol, (baseAmount * beta).toInt())
+        tradingContext.placeOrder(secondSymbol, cointegration.error < 0, baseAmount)
+        Strategy.Companion.log.debug("Order of {} in amount {}", secondSymbol, baseAmount)
+        tradingContext.placeOrder(firstSymbol, cointegration.error > 0, baseAmount * beta)
+        Strategy.Companion.log.debug("Order of {} in amount {}", firstSymbol, baseAmount * beta)
     }
 
     @Throws(PriceNotAvailableException::class)
@@ -58,12 +60,12 @@ class KalmanFilterStrategy(
         try {
             tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(firstSymbol))
         } catch (noOrderAvailable: NoOrderAvailableException) {
-            Strategy.Companion.log.error("No order available for {}", firstSymbol)
+            Strategy.log.error("No order available for {}", firstSymbol)
         }
         try {
             tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(secondSymbol))
         } catch (noOrderAvailable: NoOrderAvailableException) {
-            Strategy.Companion.log.error("No order available for {}", secondSymbol)
+            Strategy.log.error("No order available for {}", secondSymbol)
         }
     }
 
@@ -73,6 +75,7 @@ class KalmanFilterStrategy(
 
     inner class ErrorIsMoreThanStandardDeviationEntry : Criterion {
         private val errorQueue: Queue<Double> = ConcurrentLinkedQueue()
+        private val ERROR_QUEUE_SIZE_DEFAULT = 30
         fun setSdMultiplier(sdMultiplier: Double) {
             this.sdMultiplier = sdMultiplier
         }
@@ -82,11 +85,7 @@ class KalmanFilterStrategy(
             this.errorQueueSize = errorQueueSize
         }
 
-        private var errorQueueSize: Int
-
-        init {
-            errorQueueSize = Companion.ERROR_QUEUE_SIZE_DEFAULT
-        }
+        private var errorQueueSize: Int = ERROR_QUEUE_SIZE_DEFAULT
 
         override fun init() {
             if (tradingContext is IbTradingContext) {
@@ -190,9 +189,6 @@ class KalmanFilterStrategy(
                 return false
             }
 
-        companion object {
-            private const val ERROR_QUEUE_SIZE_DEFAULT = 30
-        }
     }
 
     internal inner class KalmanFilterExitCriterion : Criterion {

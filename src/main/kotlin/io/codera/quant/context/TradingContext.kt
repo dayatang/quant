@@ -123,7 +123,7 @@ interface TradingContext {
      * @return [Order] object
      */
     @Throws(PriceNotAvailableException::class)
-    fun placeOrder(contractSymbol: String, buy: Boolean, amount: Int): Order
+    fun placeOrder(contractSymbol: String, buy: Boolean, amount: Double): Order
 
     /**
      * Close existing order

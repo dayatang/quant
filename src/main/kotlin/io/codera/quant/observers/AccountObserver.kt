@@ -1,5 +1,6 @@
 package io.codera.quant.observers
 
+import com.ib.client.Decimal
 import com.ib.controller.ApiController.IAccountHandler
 import com.ib.controller.Position
 import org.slf4j.LoggerFactory
@@ -37,7 +38,7 @@ interface AccountObserver : IAccountHandler {
 
     fun setCashBalance(balance: Double)
     fun setNetValue(netValue: Double)
-    fun updateSymbolPosition(symbol: String?, position: Double)
+    fun updateSymbolPosition(symbol: String, position: Decimal)
 
     companion object {
         val logger = LoggerFactory.getLogger(AccountObserver::class.java)
