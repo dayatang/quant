@@ -16,6 +16,7 @@ import org.lst.trading.main.strategy.kalman.Cointegration
 import java.io.IOException
 import java.sql.SQLException
 import java.util.*
+import kotlin.math.abs
 
 /**
  * Back test Kalman filter cointegration strategy against SPY/VOO pair using Interactive Brokers
@@ -61,7 +62,7 @@ object BackTestApplication {
                 String.format(
                     Locale.US, "%d,%d,%s,%s,%s,%s,%f,%f,%f\n",
                     order.id,
-                    Math.abs(order.amount),
+                    abs(order.amount),
                     if (order.isLong) "Buy" else "Sell",
                     order.instrument,
                     order.openInstant,
@@ -89,7 +90,7 @@ object BackTestApplication {
                 "P/L = %.2f, Final value = %.2f, Result = %.2f%%, Annualized = %.2f%%, Sharpe (rf=0%%) = %.2f",
                 result.pl,
                 result.finalValue,
-                result.getReturn() * 100, result.getReturn() / (DAYS_OF_HISTORY / 251.0) * 100, result.sharpe
+                result.returnRate * 100, result.returnRate / (DAYS_OF_HISTORY / 251.0) * 100, result.sharpe
             )
         )
         // TODO: quick and dirty method to finish the program. Implement a better way

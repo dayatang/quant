@@ -18,6 +18,7 @@ import org.lst.trading.lib.backtest.BackTest
 import org.lst.trading.lib.backtest.BackTestTradingContext
 import java.util.*
 import kotlin.math.abs
+import kotlin.system.exitProcess
 
 /**
  * Back test for [io.codera.quant.strategy.meanrevertion.BollingerBandsStrategy]
@@ -95,10 +96,10 @@ object BollingerBandsBackTest {
                 "P/L = %.2f, Final value = %.2f, Result = %.2f%%, Annualized = %.2f%%, Sharpe (rf=0%%) = %.2f",
                 result.pl,
                 result.finalValue,
-                result.getReturn() * 100, result.getReturn() / (DAYS_OF_HISTORY / 251.0) * 100, result.sharpe
+                result.returnRate * 100, result.returnRate / (DAYS_OF_HISTORY / 251.0) * 100, result.sharpe
             )
         )
         // TODO: quick and dirty method to finish the program. Implement a better way
-        System.exit(0)
+        exitProcess(0)
     }
 }

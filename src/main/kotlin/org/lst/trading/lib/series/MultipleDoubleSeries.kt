@@ -60,11 +60,11 @@ class MultipleDoubleSeries : TimeSeries<MutableList<Double>> {
         return DoubleSeries(entries, name)
     }
 
-    fun indexOf(name: String?): Int {
+    fun indexOf(name: String): Int {
         return mNames.indexOf(name)
     }
 
-    val names: List<String?>
+    val names: List<String>
         get() = mNames
 
     override fun toString(): String {

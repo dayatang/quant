@@ -24,11 +24,11 @@ class Cointegration(var mDelta: Double, var mR: Double) {
     }
 
     val alpha: Double
-        get() = mFilter.state.getRow(0)[0]
+        get() = mFilter.state!!.getRow(0)[0]
     val beta: Double
-        get() = mFilter.state.getRow(1)[0]
+        get() = mFilter.state!!.getRow(1)[0]
     val variance: Double
-        get() = mFilter.innovationCovariance[0, 0]
+        get() = mFilter.innovationCovariance!!.get(0, 0)
     val error: Double
-        get() = mFilter.innovation[0, 0]
+        get() = mFilter.innovation!!.get(0, 0)
 }

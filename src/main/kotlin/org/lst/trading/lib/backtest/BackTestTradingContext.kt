@@ -1,6 +1,5 @@
 package org.lst.trading.lib.backtest
 
-import com.google.common.base.Preconditions
 import com.google.common.collect.Maps
 import io.codera.quant.context.TradingContext
 import io.codera.quant.exception.NoOrderAvailableException
@@ -17,14 +16,13 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.*
 import java.util.stream.Stream
-import kotlin.collections.HashMap
 import kotlin.math.abs
 import kotlin.math.max
 
 class BackTestTradingContext : TradingContext {
     override var time: Instant = Instant.now()
     var mPrices: List<Double> = emptyList()
-    override var contracts: List<String> = emptyList()
+    override var contracts: List<String> = ArrayList()
     var mPl = DoubleSeries("pl")
     var mFundsHistory = DoubleSeries("funds")
     lateinit var mHistory: MultipleDoubleSeries
@@ -53,7 +51,7 @@ class BackTestTradingContext : TradingContext {
     override fun getHistory(instrument: String): Stream<TimeSeries.Entry<Double>> {
         val index = contracts.indexOf(instrument)
         return mHistory.reversedStream()
-            .map { t: TimeSeries.Entry<List<Double>> -> TimeSeries.Entry(t.item.get(index), t.instant) }
+            .map { t -> TimeSeries.Entry(t.item[index], t.instant) }
     }
 
     override fun addContract(contract: String) {
@@ -70,9 +68,6 @@ class BackTestTradingContext : TradingContext {
         val price = getLastPrice(instrument)
         val order = SimpleOrder(mOrderId++, instrument, time, price, amount * if (buy) 1 else -1)
         mOrders.add(order)
-        if (orders == null) {
-            orders = Maps.newConcurrentMap()
-        }
         orders[instrument] = order
         mCommissions += calculateCommission(order)
         return order

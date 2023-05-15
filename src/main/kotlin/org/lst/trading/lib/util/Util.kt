@@ -14,8 +14,8 @@ object Util {
         val data = """
              date,${series.names.stream().collect(Collectors.joining(","))}
              ${
-            series.stream().map { e: TimeSeries.Entry<List<Double?>?>? ->
-                e.getInstant().toString() + "," + e.getItem().stream().map { obj: Double? -> obj.toString() }
+            series.stream().map { e: TimeSeries.Entry<MutableList<Double>> ->
+                e.instant.toString() + "," + e.item.stream().map { obj: Double -> obj.toString() }
                     .collect(Collectors.joining(","))
             }.collect(Collectors.joining("\n"))
         }

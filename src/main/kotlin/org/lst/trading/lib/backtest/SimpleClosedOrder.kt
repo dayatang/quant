@@ -4,26 +4,22 @@ import org.lst.trading.lib.model.ClosedOrder
 import java.time.Instant
 
 open class SimpleClosedOrder(
-    var mOrder: SimpleOrder?,
+    var openOrder: SimpleOrder,
     override var closePrice: Double,
     override var closeInstant: Instant
 ) : ClosedOrder {
-    override var pl: Double
-
-    init {
-        pl = calculatePl(closePrice)
-    }
+    override var pl: Double = calculatePl(closePrice)
 
     override val id: Int
-        get() = mOrder.getId()
+        get() = openOrder.id
     override val isLong: Boolean
-        get() = mOrder!!.isLong
+        get() = openOrder.isLong
     override val amount: Int
-        get() = mOrder.getAmount()
+        get() = openOrder.amount
     override val openPrice: Double
-        get() = mOrder.getOpenPrice()
-    override val openInstant: Instant?
-        get() = mOrder.getOpenInstant()
-    override val instrument: String?
-        get() = mOrder.getInstrument()
+        get() = openOrder.openPrice
+    override val openInstant: Instant
+        get() = openOrder.openInstant
+    override val instrument: String
+        get() = openOrder.instrument
 }

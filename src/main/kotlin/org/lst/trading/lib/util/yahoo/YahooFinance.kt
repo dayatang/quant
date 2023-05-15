@@ -19,7 +19,6 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.util.function.Function
 import java.util.stream.Stream
 
 class YahooFinance : HistoricalPriceService {
@@ -47,17 +46,17 @@ class YahooFinance : HistoricalPriceService {
         val lines = Files.lines(Paths.get(csvFilePath))
         var prices = CsvReader.parse(lines, SEP, DATE_COLUMN, ADJ_COLUMN)
         prices.name = symbol
-        prices = prices!!.toAscending()
+        prices = prices.toAscending()
         return prices
     }
 
     @Throws(IOException::class, URISyntaxException::class)
-    fun readCsvToDoubleSeriesFromResource(csvResourcePath: String, symbol: String): DoubleSeries? {
+    fun readCsvToDoubleSeriesFromResource(csvResourcePath: String, symbol: String): DoubleSeries {
         val resourceUrl = getResource(csvResourcePath)
         val lines = Files.lines(Paths.get(resourceUrl.toURI()))
         var prices = CsvReader.parse(lines, SEP, DATE_COLUMN, ADJ_COLUMN)
         prices.name = symbol
-        prices = prices!!.toAscending()
+        prices = prices.toAscending()
         return prices
     }
 
@@ -104,31 +103,31 @@ class YahooFinance : HistoricalPriceService {
 
     companion object {
         const val SEP = ","
-        val DATE_COLUMN: ParseFunction<Instant?> = ParseFunction.Companion.ofColumn("Date")
-            .map<Instant?>(Function<String, Instant?> { s: String? ->
-                LocalDate.from(DateTimeFormatter.ISO_DATE.parse(s))
+        val DATE_COLUMN: ParseFunction<Instant> = ParseFunction.ofColumn("Date")
+            .map {
+                LocalDate.from(DateTimeFormatter.ISO_DATE.parse(it))
                     .atStartOfDay(ZoneOffset.UTC.normalized())
                     .toInstant()
-            })
-        val CLOSE_COLUMN: ParseFunction<Double?> = ParseFunction.Companion.doubleColumn("Close")
-        val HIGH_COLUMN: ParseFunction<Double?> = ParseFunction.Companion.doubleColumn("High")
-        val LOW_COLUMN: ParseFunction<Double?> = ParseFunction.Companion.doubleColumn("Low")
-        val OPEN_COLUMN: ParseFunction<Double?> = ParseFunction.Companion.doubleColumn("Open")
-        val ADJ_COLUMN: ParseFunction<Double?> = ParseFunction.Companion.doubleColumn("Adj Close")
-        val VOLUME_COLUMN: ParseFunction<Double?> = ParseFunction.Companion.doubleColumn("Volume")
+            }
+        val CLOSE_COLUMN: ParseFunction<Double> = ParseFunction.doubleColumn("Close")
+        val HIGH_COLUMN: ParseFunction<Double> = ParseFunction.doubleColumn("High")
+        val LOW_COLUMN: ParseFunction<Double> = ParseFunction.doubleColumn("Low")
+        val OPEN_COLUMN: ParseFunction<Double> = ParseFunction.doubleColumn("Open")
+        val ADJ_COLUMN: ParseFunction<Double> = ParseFunction.doubleColumn("Adj Close")
+        val VOLUME_COLUMN: ParseFunction<Double> = ParseFunction.doubleColumn("Volume")
         val DEFAULT_FROM = OffsetDateTime.of(2010, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC)
         private val log = LoggerFactory.getLogger(YahooFinance::class.java)
         private fun getHistoricalPricesCsv(symbol: String, from: Instant, to: Instant): Observable<String> {
-            return get(createHistoricalPricesUrl(symbol, from, to))
+            return Http.get(createHistoricalPricesUrl(symbol, from, to))
                 .flatMap<String>(Http.asString())
         }
 
-        private fun csvToDoubleSeries(csv: String, symbol: String): DoubleSeries? {
+        private fun csvToDoubleSeries(csv: String, symbol: String): DoubleSeries {
             val lines = Stream.of(*csv.split("\n".toRegex()).dropLastWhile { it.isEmpty() }
                 .toTypedArray())
             var prices = CsvReader.parse(lines, SEP, DATE_COLUMN, ADJ_COLUMN)
             prices.name = symbol
-            prices = prices!!.toAscending()
+            prices = prices.toAscending()
             return prices
         }
 

@@ -78,9 +78,23 @@ import org.la4j.matrix.DenseMatrix
  * P' = P - P(transp H)(inv S)HP
  */
 class KalmanFilter(// n
-    private val mStateCount: Int, // m
-    private val mSensorCount: Int
+    private val stateCount: Int, // m
+    private val sensorCount: Int
 ) {
+
+    /**
+     * stateCount x 1
+     *
+     *
+     * The control input, the move vector.
+     * It's the change to x that we cause, or that we know is happening.
+     * Since we add it to x, it has dimension n. When the filter updates, it adds u to the new x.
+     *
+     *
+     * External moves to the system.
+     */
+    private var moveVector: Matrix = Matrix.zero(stateCount, 1)
+
     // state
     /**
      * stateCount x 1
@@ -115,21 +129,7 @@ class KalmanFilter(// n
      * Error in the process, after each update this uncertainty is added.
      */
     var updateCovariance: Matrix? = null // Q, Estimated error in process.
-
-    /**
-     * stateCount x 1
-     *
-     *
-     * The control input, the move vector.
-     * It's the change to x that we cause, or that we know is happening.
-     * Since we add it to x, it has dimension n. When the filter updates, it adds u to the new x.
-     *
-     *
-     * External moves to the system.
-     */
-    private var mMoveVector // u, Control vector
-            : Matrix
-    // measurement
+   // measurement
     /**
      * sensorCount x 1
      *
@@ -171,13 +171,9 @@ class KalmanFilter(// n
     var innovationCovariance: Matrix? = null
         private set
 
-    init {
-        mMoveVector = Matrix.zero(mStateCount, 1)
-    }
-
     private fun step() {
         // prediction
-        val predictedState = updateMatrix!!.multiply(state).add(mMoveVector)
+        val predictedState = updateMatrix!!.multiply(state).add(moveVector)
         val predictedStateCovariance =
             updateMatrix!!.multiply(stateCovariance).multiply(updateMatrix!!.transpose()).add(
                 updateCovariance
@@ -192,7 +188,7 @@ class KalmanFilter(// n
 
         // update
         val kalmanGain = predictedStateCovariance.multiply(extractionMatrix!!.transpose()).multiply(
-            innovationCovariance.withInverter(LinearAlgebra.InverterFactory.SMART).inverse()
+            innovationCovariance!!.withInverter(LinearAlgebra.InverterFactory.SMART).inverse()
         )
         state = predictedState.add(kalmanGain.multiply(innovation))
         val nRow = stateCovariance!!.rows()
@@ -202,7 +198,7 @@ class KalmanFilter(// n
 
     fun step(measurement: Matrix?, move: Matrix) {
         mMeasurement = measurement
-        mMoveVector = move
+        moveVector = move
         step()
     }
 

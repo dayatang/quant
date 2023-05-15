@@ -8,21 +8,24 @@ import org.lst.trading.lib.series.MultipleDoubleSeries
 import org.lst.trading.lib.series.TimeSeries
 import org.lst.trading.lib.util.Util
 import org.lst.trading.main.strategy.AbstractTradingStrategy
-import org.lst.trading.main.strategy.kalman.CointegrationTradingStrategy
 import org.slf4j.LoggerFactory
-import java.util.function.ToDoubleFunction
+import kotlin.math.abs
+import kotlin.math.min
+import kotlin.math.sqrt
 
-class CointegrationTradingStrategy(weight: Double, x: String, y: String) : AbstractTradingStrategy() {
+class CointegrationTradingStrategy(
+    weight: Double,
+    val mX: String,
+    val mY: String
+) : AbstractTradingStrategy(weight) {
     var mReinvest = false
-    var mX: String
-    var mY: String
     var mContext: TradingContext? = null
     var mCoint: Cointegration? = null
-    var alpha: DoubleSeries? = null
-    var beta: DoubleSeries? = null
+    var mAlpha: DoubleSeries? = null
+    var mBeta: DoubleSeries? = null
     var xs: DoubleSeries? = null
     var ys: DoubleSeries? = null
-    var error: DoubleSeries? = null
+    var mError: DoubleSeries? = null
     var variance: DoubleSeries? = null
     var model: DoubleSeries? = null
     var mXOrder: Order? = null
@@ -30,20 +33,14 @@ class CointegrationTradingStrategy(weight: Double, x: String, y: String) : Abstr
 
     constructor(x: String, y: String) : this(1.0, x, y)
 
-    init {
-        setWeight(weight)
-        mX = x
-        mY = y
-    }
-
-    override fun onStart(context: TradingContext?) {
+    override fun onStart(context: TradingContext) {
         mContext = context
         mCoint = Cointegration(1e-4, 1e-3)
-        alpha = DoubleSeries("alpha")
-        beta = DoubleSeries("beta")
+        mAlpha = DoubleSeries("alpha")
+        mBeta = DoubleSeries("beta")
         xs = DoubleSeries("x")
         ys = DoubleSeries("y")
-        error = DoubleSeries("error")
+        mError = DoubleSeries("error")
         variance = DoubleSeries("variance")
         model = DoubleSeries("model")
     }
@@ -51,25 +48,26 @@ class CointegrationTradingStrategy(weight: Double, x: String, y: String) : Abstr
     override fun onTick() {
         val x = mContext!!.getLastPrice(mX)
         val y = mContext!!.getLastPrice(mY)
-        val alpha = mCoint.getAlpha()
-        val beta = mCoint.getBeta()
+        val alpha = mCoint!!.alpha
+        val beta = mCoint!!.beta
         mCoint!!.step(x, y)
-        alpha.add(alpha, mContext.getTime())
-        beta.add(beta, mContext.getTime())
-        xs!!.add(x, mContext.getTime())
-        ys!!.add(y, mContext.getTime())
-        error!!.add(mCoint.getError(), mContext.getTime())
-        variance!!.add(mCoint.getVariance(), mContext.getTime())
-        val error = mCoint.getError()
-        model!!.add(beta * x + alpha, mContext.getTime())
-        if (error.size() > 30) {
+        this.mAlpha!!.add(alpha, mContext!!.time)
+        this.mBeta!!.add(beta, mContext!!.time)
+        xs!!.add(x, mContext!!.time)
+        ys!!.add(y, mContext!!.time)
+        mError!!.add(mCoint!!.error, mContext!!.time)
+        variance!!.add(mCoint!!.variance, mContext!!.time)
+        val error = mCoint!!.error
+        model!!.add(beta * x + alpha, mContext!!.time)
+        if (mError!!.size() > 30) {
             val lastValues: DoubleArray =
-                error.reversedStream().mapToDouble(ToDoubleFunction<TimeSeries.Entry<Double?>?> { getItem() }).limit(15)
+                mError!!.reversedStream()
+                    .mapToDouble(TimeSeries.Entry<Double>::item).limit(15)
                     .toArray()
-            val sd = Math.sqrt(StatUtils.variance(lastValues))
-            if (mYOrder == null && Math.abs(error) > sd) {
-                val value = if (mReinvest) mContext.getNetValue() else mContext.getInitialFunds()
-                val baseAmount = value * weight * 0.5 * Math.min(4.0, mContext.getLeverage()) / (y + beta * x)
+            val sd = sqrt(StatUtils.variance(lastValues))
+            if (mYOrder == null && abs(error) > sd) {
+                val value = if (mReinvest) mContext!!.netValue else mContext!!.initialFunds
+                val baseAmount = value * weight * 0.5 * min(4.0, mContext!!.leverage) / (y + beta * x)
                 if (beta > 0 && baseAmount * beta >= 1) {
                     mYOrder = mContext!!.order(mY, error < 0, baseAmount.toInt())
                     mXOrder = mContext!!.order(mX, error > 0, (baseAmount * beta).toInt())
@@ -77,8 +75,8 @@ class CointegrationTradingStrategy(weight: Double, x: String, y: String) : Abstr
                 //log.debug("Order: baseAmount={}, residual={}, sd={}, beta={}", baseAmount, residual, sd, beta);
             } else if (mYOrder != null) {
                 if (mYOrder!!.isLong && error > 0 || !mYOrder!!.isLong && error < 0) {
-                    mContext!!.close(mYOrder)
-                    mContext!!.close(mXOrder)
+                    mContext!!.close(mYOrder!!)
+                    mContext!!.close(mXOrder!!)
                     mYOrder = null
                     mXOrder = null
                 }
@@ -90,7 +88,7 @@ class CointegrationTradingStrategy(weight: Double, x: String, y: String) : Abstr
         log.debug(
             "Kalman filter statistics: " + Util.writeCsv(
                 MultipleDoubleSeries(
-                    xs!!, ys!!, alpha!!, beta!!, error!!, variance!!, model!!
+                    xs!!, ys!!, mAlpha!!, mBeta!!, mError!!, variance!!, model!!
                 )
             )
         )

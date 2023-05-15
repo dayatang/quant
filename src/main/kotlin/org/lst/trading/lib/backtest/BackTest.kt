@@ -9,10 +9,13 @@ import org.lst.trading.lib.util.Statistics
 import org.lst.trading.lib.util.Util
 import java.util.*
 
-class BackTest(deposit: Double, priceSeries: MultipleDoubleSeries) {
+class BackTest(
+    private var deposit: Double,
+    private var priceSeries: MultipleDoubleSeries
+) {
     class Result(
         var pl: Double,
-        var plHistory: DoubleSeries,
+        var history: DoubleSeries,
         var marginHistory: DoubleSeries,
         var orders: List<ClosedOrder>,
         var initialFund: Double,
@@ -21,11 +24,11 @@ class BackTest(deposit: Double, priceSeries: MultipleDoubleSeries) {
     ) {
 
         val accountValueHistory: DoubleSeries
-            get() = plHistory.plus(initialFund)
-        val `return`: Double
+            get() = history.plus(initialFund)
+        val returnRate: Double
             get() = finalValue / initialFund - 1
         val annualizedReturn: Double
-            get() = `return` * 250 / daysCount
+            get() = returnRate * 250 / daysCount
         val sharpe: Double
             get() = Statistics.sharpe(Statistics.returns(accountValueHistory.toArray()))
         val maxDrawdown: Double
@@ -33,75 +36,71 @@ class BackTest(deposit: Double, priceSeries: MultipleDoubleSeries) {
         val maxDrawdownPercent: Double
             get() = Statistics.drawdown(accountValueHistory.toArray())[1]
         val daysCount: Int
-            get() = plHistory.size()
+            get() = history.size()
     }
 
-    var mPriceSeries: MultipleDoubleSeries
-    var mDeposit: Double
     var leverage = 1.0
     var mStrategy: Strategy? = null
     var mContext: BackTestTradingContext? = null
-    var mPriceIterator: Iterator<TimeSeries.Entry<List<Double?>?>?>? = null
+    var mPriceIterator: Iterator<TimeSeries.Entry<MutableList<Double>>>? = null
     var result: Result? = null
 
     init {
         Util.check(priceSeries.isAscending)
-        mDeposit = deposit
-        mPriceSeries = priceSeries
     }
 
-    fun run(strategy: Strategy): Result? {
+    fun run(strategy: Strategy): Result {
         initialize(strategy)
         while (nextStep());
-        return result
+        return result!!
     }
 
-    fun initialize(strategy: Strategy) {
+    private fun initialize(strategy: Strategy) {
         mStrategy = strategy
         mContext = strategy.tradingContext as BackTestTradingContext
-        mContext.mInstruments = mPriceSeries.names
-        mContext.mHistory = MultipleDoubleSeries(mContext.mInstruments)
-        mContext.mInitialFunds = mDeposit
-        mContext.mLeverage = leverage
-        mPriceIterator = mPriceSeries.iterator()
+        mContext!!.contracts = priceSeries.names
+        mContext!!.mHistory = MultipleDoubleSeries(mContext!!.contracts)
+        mContext!!.initialFunds = deposit
+        mContext!!.leverage = leverage
+        mPriceIterator = priceSeries.iterator()
         nextStep()
     }
 
     fun nextStep(): Boolean {
-        if (!mPriceIterator.hasNext()) {
+        if (!mPriceIterator!!.hasNext()) {
             finish()
             return false
         }
-        val entry = mPriceIterator.next()
-        mContext.mPrices = entry.getItem()
-        mContext.mInstant = entry.getInstant()
-        mContext.mPl.add(mContext.getPl(), entry.getInstant())
-        mContext.mFundsHistory.add(mContext.availableFunds, entry.getInstant())
-        if (mContext.availableFunds < 0) {
+        val entry = mPriceIterator!!.next()
+        mContext!!.mPrices = entry.item
+        mContext!!.time = entry.instant
+        mContext!!.mPl.add(mContext!!.pl, entry.instant)
+        mContext!!.mFundsHistory.add(mContext!!.availableFunds, entry.instant)
+        if (mContext!!.availableFunds < 0) {
             finish()
             return false
         }
-        mStrategy.onTick()
-        mContext.mHistory.add(entry)
+        mStrategy!!.onTick()
+        mContext!!.mHistory.add(entry)
         return true
     }
 
     private fun finish() {
-        for (order in ArrayList(mContext.mOrders)) {
-            mContext.closeOrder(order)
+        for (order in ArrayList(mContext!!.mOrders)) {
+            mContext!!.closeOrder(order)
         }
 
         // TODO (replace below code with BackTest results implementation
 //        mStrategy.onEnd();
-        val orders = Collections.unmodifiableList<ClosedOrder?>(mContext.mClosedOrders)
+        val orders = Collections.unmodifiableList<ClosedOrder>(mContext!!.mClosedOrders)
         result = Result(
-            mContext.mClosedPl,
-            mContext.mPl,
-            mContext.mFundsHistory,
+            mContext!!.mClosedPl,
+            mContext!!.mPl,
+            mContext!!.mFundsHistory,
             orders,
-            mDeposit,
-            mDeposit + mContext.mClosedPl,
-            mContext.mCommissions
+            deposit,
+            deposit + mContext!!.mClosedPl,
+            mContext!!.mCommissions
         )
     }
 }
