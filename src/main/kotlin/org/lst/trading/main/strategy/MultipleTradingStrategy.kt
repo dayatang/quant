@@ -1,44 +1,44 @@
-package org.lst.trading.main.strategy;
+package org.lst.trading.main.strategy
 
-import java.util.ArrayList;
-import java.util.List;
-import org.lst.trading.lib.model.TradingContext;
-import org.lst.trading.lib.model.TradingStrategy;
+import org.lst.trading.lib.model.TradingContext
+import org.lst.trading.lib.model.TradingStrategy
+import java.util.function.Consumer
 
-public class MultipleTradingStrategy implements TradingStrategy {
-    public static MultipleTradingStrategy of(TradingStrategy... strategies) {
-        MultipleTradingStrategy strategy = new MultipleTradingStrategy();
-        for (TradingStrategy s : strategies) {
-            strategy.add(s);
-        }
-        return strategy;
+class MultipleTradingStrategy : TradingStrategy {
+    var mStrategies: MutableList<TradingStrategy> = ArrayList()
+    fun add(strategy: TradingStrategy): Boolean {
+        return mStrategies.add(strategy)
     }
 
-    List<TradingStrategy> mStrategies = new ArrayList<>();
-
-    public boolean add(TradingStrategy strategy) {
-        return mStrategies.add(strategy);
+    fun size(): Int {
+        return mStrategies.size
     }
 
-    public int size() {
-        return mStrategies.size();
+    override fun onStart(context: TradingContext?) {
+        mStrategies.forEach(Consumer { t: TradingStrategy -> t.onStart(context) })
     }
 
-    @Override public void onStart(TradingContext context) {
-        mStrategies.forEach(t -> t.onStart(context));
+    override fun onTick() {
+        mStrategies.forEach(Consumer { obj: TradingStrategy -> obj.onTick() })
     }
 
-    @Override public void onTick() {
-        mStrategies.forEach(TradingStrategy::onTick);
+    override fun onEnd() {
+        mStrategies.forEach(Consumer { obj: TradingStrategy -> obj.onEnd() })
     }
 
-    @Override public void onEnd() {
-        mStrategies.forEach(TradingStrategy::onEnd);
-    }
-
-    @Override public String toString() {
+    override fun toString(): String {
         return "MultipleStrategy{" +
-            "mStrategies=" + mStrategies +
-            '}';
+                "mStrategies=" + mStrategies +
+                '}'
+    }
+
+    companion object {
+        fun of(vararg strategies: TradingStrategy): MultipleTradingStrategy {
+            val strategy = MultipleTradingStrategy()
+            for (s in strategies) {
+                strategy.add(s)
+            }
+            return strategy
+        }
     }
 }

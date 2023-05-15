@@ -1,11 +1,6 @@
-package io.codera.quant.exception;
+package io.codera.quant.exception
 
 /**
  *
  */
-public class CriterionViolationException extends Exception {
-
-  public CriterionViolationException(String msg) {
-    super(msg);
-  }
-}
+class CriterionViolationException(msg: String?) : Exception(msg)

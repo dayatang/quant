@@ -1,96 +1,87 @@
-package org.lst.trading.lib.series;
+package org.lst.trading.lib.series
 
-import java.util.List;
-import java.util.function.Function;
+import org.lst.trading.lib.series.TimeSeries.MergeFunction
+import java.util.function.Function
+import java.util.function.ToDoubleFunction
 
-public class DoubleSeries extends TimeSeries<Double> {
-    String mName;
+class DoubleSeries : TimeSeries<Double?> {
+    var name: String
 
-    DoubleSeries(List<Entry<Double>> data, String name) {
-        super(data);
-        mName = name;
+    internal constructor(data: MutableList<Entry<Double?>>?, name: String) : super(
+        data!!
+    ) {
+        this.name = name
     }
 
-    public DoubleSeries(String name) {
-        super();
-        mName = name;
+    constructor(name: String) : super() {
+        this.name = name
     }
 
-    public String getName() {
-        return mName;
+    fun merge(other: DoubleSeries, f: MergeFunction<Double, Double?>): DoubleSeries {
+        return DoubleSeries(TimeSeries.Companion.merge<Double, Double?>(this, other, f).mData, name)
     }
 
-    public void setName(String name) {
-        mName = name;
+    fun mapToDouble(f: Function<Double?, Double?>?): DoubleSeries {
+        return DoubleSeries(map(f).mData, name)
     }
 
-    public DoubleSeries merge(DoubleSeries other, MergeFunction<Double, Double> f) {
-        return new DoubleSeries(DoubleSeries.merge(this, other, f).mData, mName);
+    operator fun plus(other: DoubleSeries): DoubleSeries {
+        return merge(other, MergeFunction { x: Double, y: Double -> x + y })
     }
 
-    public DoubleSeries mapToDouble(Function<Double, Double> f) {
-        return new DoubleSeries(map(f).mData, mName);
+    operator fun plus(other: Double): DoubleSeries {
+        return mapToDouble { x: Double? -> x!! + other }
     }
 
-    public DoubleSeries plus(DoubleSeries other) {
-        return merge(other, (x, y) -> x + y);
+    fun mul(other: DoubleSeries): DoubleSeries {
+        return merge(other, MergeFunction { x: Double, y: Double -> x * y })
     }
 
-    public DoubleSeries plus(double other) {
-        return mapToDouble(x -> x + other);
+    fun mul(factor: Double): DoubleSeries {
+        return mapToDouble { x: Double? -> x!! * factor }
     }
 
-    public DoubleSeries mul(DoubleSeries other) {
-        return merge(other, (x, y) -> x * y);
+    operator fun div(other: DoubleSeries): DoubleSeries {
+        return merge(other, MergeFunction { x: Double, y: Double -> x / y })
     }
 
-    public DoubleSeries mul(double factor) {
-        return mapToDouble(x -> x * factor);
+    fun returns(): DoubleSeries {
+        return this.div(lag(1)).plus(-1.0)
     }
 
-    public DoubleSeries div(DoubleSeries other) {
-        return merge(other, (x, y) -> x / y);
+    val last: Double
+        get() = data[size() - 1].item
+
+    fun tail(n: Int): DoubleSeries {
+        return DoubleSeries(data.subList(size() - n, size()), name)
     }
 
-    public DoubleSeries returns() {
-        return this.div(lag(1)).plus(-1);
+    fun returns(days: Int): DoubleSeries {
+        return this.div(lag(days)).plus(-1.0)
     }
 
-    public double getLast() {
-        return getData().get(size() - 1).getItem();
+    fun toArray(): DoubleArray {
+        return stream().mapToDouble(ToDoubleFunction { obj: Entry<Double?>? -> obj.getItem() }).toArray()
     }
 
-    public DoubleSeries tail(int n) {
-        return new DoubleSeries(getData().subList(size() - n, size()), getName());
+    override fun toAscending(): DoubleSeries {
+        return DoubleSeries(super.toAscending().mData, name)
     }
 
-    public DoubleSeries returns(int days) {
-        return this.div(lag(days)).plus(-1);
+    override fun toDescending(): DoubleSeries {
+        return DoubleSeries(super.toDescending().mData, name)
     }
 
-    public double[] toArray() {
-        return stream().mapToDouble(Entry::getItem).toArray();
+    override fun lag(k: Int): DoubleSeries {
+        return DoubleSeries(super.lag(k).mData, name)
     }
 
-    @Override public DoubleSeries toAscending() {
-        return new DoubleSeries(super.toAscending().mData, getName());
-    }
-
-    @Override public DoubleSeries toDescending() {
-        return new DoubleSeries(super.toDescending().mData, getName());
-    }
-
-    @Override public DoubleSeries lag(int k) {
-        return new DoubleSeries(super.lag(k).mData, getName());
-    }
-
-    @Override public String toString() {
-        return mData.isEmpty() ? "DoubleSeries{empty}" :
-            "DoubleSeries{" +
-                "mName=" + mName +
-                ", from=" + mData.get(0).getInstant() +
-                ", to=" + mData.get(mData.size() - 1).getInstant() +
-                ", size=" + mData.size() +
-                '}';
+    override fun toString(): String {
+        return if (mData.isEmpty()) "DoubleSeries{empty}" else "DoubleSeries{" +
+                "mName=" + name +
+                ", from=" + mData[0].instant +
+                ", to=" + mData[mData.size - 1].instant +
+                ", size=" + mData.size +
+                '}'
     }
 }

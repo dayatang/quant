@@ -1,37 +1,29 @@
-package io.codera.quant.strategy.criterion;
+package io.codera.quant.strategy.criterion
 
-import io.codera.quant.context.TradingContext;
-import io.codera.quant.exception.CriterionViolationException;
-import io.codera.quant.exception.NoOrderAvailableException;
-import io.codera.quant.strategy.Criterion;
-import java.util.List;
-import org.lst.trading.lib.model.Order;
-
+import io.codera.quant.context.TradingContext
+import io.codera.quant.exception.CriterionViolationException
+import io.codera.quant.exception.NoOrderAvailableException
+import io.codera.quant.strategy.Criterion
 
 /**
  * Checks that no open orders available for specified symbols
  */
-public class NoOpenOrdersExistEntryCriterion implements Criterion {
-
-  protected final List<String> symbols;
-  protected final TradingContext tradingContext;
-
-  public NoOpenOrdersExistEntryCriterion(TradingContext tradingContext, List<String> symbols) {
-    this.tradingContext = tradingContext;
-    this.symbols = symbols;
-  }
-
-  @Override
-  public boolean isMet() throws CriterionViolationException {
-    for(String symbol : symbols) {
-      try {
-        Order order = tradingContext.getLastOrderBySymbol(symbol);
-        if(order != null) {
-          return false;
+open class NoOpenOrdersExistEntryCriterion(
+    protected val tradingContext: TradingContext,
+    protected val symbols: List<String>
+) : Criterion {
+    @get:Throws(CriterionViolationException::class)
+    override val isMet: Boolean
+        get() {
+            for (symbol in symbols) {
+                try {
+                    val order = tradingContext.getLastOrderBySymbol(symbol)
+                    if (order != null) {
+                        return false
+                    }
+                } catch (ignored: NoOrderAvailableException) {
+                }
+            }
+            return true
         }
-      } catch (NoOrderAvailableException ignored) {
-      }
-    }
-    return true;
-  }
 }

@@ -1,35 +1,42 @@
-package io.codera.quant.observers;
+package io.codera.quant.observers
 
-import com.ib.client.OrderState;
-import com.ib.client.OrderStatus;
-import rx.Observable;
-import rx.subjects.PublishSubject;
+import com.ib.client.OrderState
+import com.ib.client.OrderStatus
+import rx.Observable
+import rx.subjects.PublishSubject
 
 /**
  *
  */
-public class IbOrderObserver implements OrderObserver {
+class IbOrderObserver : OrderObserver {
+    private val orderSubject: PublishSubject<OrderState>
 
-  private final PublishSubject<OrderState> orderSubject;
+    init {
+        orderSubject = PublishSubject.create()
+    }
 
-  public IbOrderObserver() {
-    orderSubject = PublishSubject.create();
-  }
+    override fun orderState(orderState: OrderState) {
+        orderSubject.onNext(orderState)
+    }
 
-  @Override
-  public void orderState(OrderState orderState) {
-    orderSubject.onNext(orderState);
-  }
+    override fun orderStatus(
+        status: OrderStatus, filled: Double, remaining: Double, avgFillPrice: Double,
+        permId: Int, parentId: Int, lastFillPrice: Double, clientId: Int, whyHeld: String, mktCapPrice: Double
+    ) {
+        super.orderStatus(
+            status,
+            filled,
+            remaining,
+            avgFillPrice,
+            permId.toLong(),
+            parentId,
+            lastFillPrice,
+            clientId,
+            whyHeld
+        )
+    }
 
-  @Override
-  public void orderStatus(OrderStatus status, double filled, double remaining, double avgFillPrice,
-                          int permId, int parentId, double lastFillPrice, int clientId, String whyHeld, double mktCapPrice) {
-    OrderObserver.super.orderStatus(status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld);
-  }
-
-  public Observable<OrderState> observableOrderState() {
-    return orderSubject.asObservable();
-  }
-
-
+    fun observableOrderState(): Observable<OrderState> {
+        return orderSubject.asObservable()
+    }
 }

@@ -1,55 +1,46 @@
-package io.codera.quant.config;
+package io.codera.quant.config
 
-import com.google.common.collect.Lists;
-import com.ib.controller.ApiController.IConnectionHandler;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.google.common.collect.Lists
+import com.ib.controller.ApiController.IConnectionHandler
+import org.slf4j.LoggerFactory
 
 /**
  *
  */
-public class IbConnectionHandler implements IConnectionHandler {
+class IbConnectionHandler : IConnectionHandler {
+    private val accountList = Lists.newArrayList<String>()
+    override fun connected() {
+        logger.info("Connected")
+    }
 
-  private static Logger logger = LoggerFactory.getLogger(IbConnectionHandler.class);
-  private ArrayList<String> accountList = Lists.newArrayList();
+    override fun disconnected() {
+        logger.info("Disconnected")
+    }
 
-  @Override
-  public void connected() {
-    logger.info("Connected");
-  }
+    override fun accountList(list: List<String>) {
+        show("Received account list")
+        accountList.clear()
+        accountList.addAll(list)
+    }
 
-  @Override
-  public void disconnected() {
-    logger.info("Disconnected");
-  }
+    override fun error(e: Exception) {
+        logger.error(e.message)
+        e.printStackTrace()
+    }
 
-  @Override
-  public void accountList(List<String> list) {
-    show("Received account list");
-    accountList.clear();
-    accountList.addAll(list);
-  }
+    override fun message(id: Int, errorCode: Int, errorMsg: String) {
+        logger.info("Message id: {}, errorCode: {}, errorMsg: {}", id, errorCode, errorMsg)
+    }
 
-  @Override
-  public void error(Exception e) {
-    logger.error(e.getMessage());
-    e.printStackTrace();
-  }
+    override fun show(string: String) {
+        logger.info(string)
+    }
 
-  @Override
-  public void message(int id, int errorCode, String errorMsg) {
-    logger.info("Message id: {}, errorCode: {}, errorMsg: {}", id, errorCode, errorMsg);
-  }
+    fun getAccountList(): List<String> {
+        return accountList
+    }
 
-  @Override
-  public void show(String string) {
-    logger.info(string);
-  }
-
-  public List<String> getAccountList() {
-    return accountList;
-  }
+    companion object {
+        private val logger = LoggerFactory.getLogger(IbConnectionHandler::class.java)
+    }
 }

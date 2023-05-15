@@ -1,58 +1,41 @@
-package io.codera.quant.observers;
+package io.codera.quant.observers
 
-import com.ib.client.TickAttrib;
-import com.ib.client.TickType;
-import com.ib.client.Types;
-import com.ib.controller.ApiController.ITopMktDataHandler;
-import io.codera.quant.config.ContractBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import rx.Observable;
-import rx.subjects.PublishSubject;
+import com.ib.client.TickAttrib
+import com.ib.client.TickType
+import com.ib.controller.ApiController.ITopMktDataHandler
+import io.codera.quant.config.ContractBuilder
+import io.codera.quant.observers.MarketDataObserver.Price
+import org.slf4j.LoggerFactory
+import rx.Observable
+import rx.subjects.PublishSubject
 
 /**
- *  Wraps IB {@link ITopMktDataHandler} into observer to simplify
- *  access to data (price) feed
+ * Wraps IB [ITopMktDataHandler] into observer to simplify
+ * access to data (price) feed
  */
-public class IbMarketDataObserver implements MarketDataObserver {
+class IbMarketDataObserver(override val symbol: String) : MarketDataObserver {
+    private val priceSubject: PublishSubject<Price?>
 
-  private static final Logger log = LoggerFactory.getLogger(IbMarketDataObserver.class);
-
-  private final String symbol;
-  private final PublishSubject<Price> priceSubject;
-
-  public IbMarketDataObserver(String symbol) {
-    this.symbol = symbol;
-    this.priceSubject = PublishSubject.create();
-  }
-
-  @Override
-  public void tickPrice(TickType tickType, double price, TickAttrib attribs) {
-    if(price == -1.0) { // do not update price with bogus value when market is about ot be closed
-      return;
+    init {
+        priceSubject = PublishSubject.create()
     }
-    double realPrice = ContractBuilder.getSymbolPrice(symbol, price);
 
-    priceSubject.onNext(new Price(tickType, realPrice));
+    override fun tickPrice(tickType: TickType, price: Double, attribs: TickAttrib) {
+        if (price == -1.0) { // do not update price with bogus value when market is about ot be closed
+            return
+        }
+        val realPrice: Double = ContractBuilder.Companion.getSymbolPrice(symbol, price)
+        priceSubject.onNext(Price(tickType, realPrice))
+    }
 
-  }
+    override fun priceObservable(): Observable<Price?> {
+        return priceSubject.asObservable()
+    }
 
-  public String getSymbol() {
-    return symbol;
-  }
+    override fun marketDataType(marketDataType: Int) {}
+    override fun tickReqParams(tickerId: Int, minTick: Double, bboExchange: String, snapshotPermissions: Int) {}
 
-  public Observable<Price> priceObservable() {
-    return priceSubject.asObservable();
-  }
-
-
-  @Override
-  public void marketDataType(int marketDataType) {
-
-  }
-
-  @Override
-  public void tickReqParams(int tickerId, double minTick, String bboExchange, int snapshotPermissions) {
-
-  }
+    companion object {
+        private val log = LoggerFactory.getLogger(IbMarketDataObserver::class.java)
+    }
 }

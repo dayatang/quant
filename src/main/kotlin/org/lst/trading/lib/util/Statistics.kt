@@ -1,36 +1,32 @@
-package org.lst.trading.lib.util;
+package org.lst.trading.lib.util
 
-import org.apache.commons.math3.stat.StatUtils;
+import org.apache.commons.math3.stat.StatUtils
 
-public class Statistics {
-    public static double[] drawdown(double[] series) {
-        double max = Double.MIN_VALUE;
-        double ddPct = Double.MAX_VALUE;
-        double dd = Double.MAX_VALUE;
-
-        for (double x : series) {
-            dd = Math.min(x - max, dd);
-            ddPct = Math.min(x / max - 1, ddPct);
-            max = Math.max(max, x);
+object Statistics {
+    fun drawdown(series: DoubleArray?): DoubleArray {
+        var max = Double.MIN_VALUE
+        var ddPct = Double.MAX_VALUE
+        var dd = Double.MAX_VALUE
+        for (x in series!!) {
+            dd = Math.min(x - max, dd)
+            ddPct = Math.min(x / max - 1, ddPct)
+            max = Math.max(max, x)
         }
-
-        return new double[]{dd, ddPct};
+        return doubleArrayOf(dd, ddPct)
     }
 
-    public static double sharpe(double[] dailyReturns) {
-        return StatUtils.mean(dailyReturns) / Math.sqrt(StatUtils.variance(dailyReturns)) * Math.sqrt(250);
+    fun sharpe(dailyReturns: DoubleArray?): Double {
+        return StatUtils.mean(dailyReturns) / Math.sqrt(StatUtils.variance(dailyReturns)) * Math.sqrt(250.0)
     }
 
-    public static double[] returns(double[] series) {
-        if (series.length <= 1) {
-            return new double[0];
+    fun returns(series: DoubleArray?): DoubleArray {
+        if (series!!.size <= 1) {
+            return DoubleArray(0)
         }
-
-        double[] returns = new double[series.length - 1];
-        for (int i = 1; i < series.length; i++) {
-            returns[i - 1] = series[i] / series[i - 1] - 1;
+        val returns = DoubleArray(series.size - 1)
+        for (i in 1 until series.size) {
+            returns[i - 1] = series[i] / series[i - 1] - 1
         }
-
-        return returns;
+        return returns
     }
 }

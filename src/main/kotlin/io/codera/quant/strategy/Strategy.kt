@@ -1,42 +1,37 @@
-package io.codera.quant.strategy;
+package io.codera.quant.strategy
 
-import io.codera.quant.context.TradingContext;
-import io.codera.quant.exception.PriceNotAvailableException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.codera.quant.context.TradingContext
+import io.codera.quant.exception.PriceNotAvailableException
+import org.slf4j.LoggerFactory
 
 /**
  * Strategy interface.
  */
-public interface Strategy {
-
-    Logger log = LoggerFactory.getLogger(Strategy.class);
-
+interface Strategy {
     /**
      * Executed every time when new data is received.
      * Drives placing trades based on loaded entry and exit criteria and lot sizes.
-     * This method will also update {@link BackTestResult object if run in backtest mode}.
+     * This method will also update [object if run in backtest mode][BackTestResult].
      */
-    default void onTick() {
-
-        if (isCommonCriteriaMet()) {
-            if (isEntryCriteriaMet()) {
+    fun onTick() {
+        if (isCommonCriteriaMet) {
+            if (isEntryCriteriaMet) {
                 try {
-                    openPosition();
-                } catch (PriceNotAvailableException e) {
-                    log.error("Price for requested contract is not available");
+                    openPosition()
+                } catch (e: PriceNotAvailableException) {
+                    log.error("Price for requested contract is not available")
                 }
-            } else if (isStopLossCriteriaMet()) {
+            } else if (isStopLossCriteriaMet) {
                 try {
-                    closePosition();
-                } catch (PriceNotAvailableException e) {
-                    log.error("Price for requested contract is not available");
+                    closePosition()
+                } catch (e: PriceNotAvailableException) {
+                    log.error("Price for requested contract is not available")
                 }
-            } else if (isExitCriteriaMet()) {
+            } else if (isExitCriteriaMet) {
                 try {
-                    closePosition();
-                } catch (PriceNotAvailableException e) {
-                    log.error("Price for requested contract is not available");
+                    closePosition()
+                } catch (e: PriceNotAvailableException) {
+                    log.error("Price for requested contract is not available")
                 }
             }
         }
@@ -49,117 +44,120 @@ public interface Strategy {
      * @param buy      true of buy, false if sell
      * @return size of the lot
      */
-    int getLotSize(String contract, boolean buy);
+    fun getLotSize(contract: String?, buy: Boolean): Int
 
     /**
      * Checks if common criterion is met for current tick.
      *
      * @return true if met, false otherwise
      */
-    boolean isCommonCriteriaMet();
+    val isCommonCriteriaMet: Boolean
 
     /**
      * Checks if entry criterion is met for current tick.
      *
      * @return true if met, false otherwise
      */
-    boolean isEntryCriteriaMet();
+    val isEntryCriteriaMet: Boolean
 
     /**
      * Checks if exit criterion is met for current tick.
      *
      * @return true if met, false otherwise
      */
-    boolean isExitCriteriaMet();
-
-    /**
-     * Checks if stop loss criterion is met for current tick.
-     *
-     * @return true if met, false otherwise
-     */
-    default boolean isStopLossCriteriaMet() {
-        return false;
-    }
+    val isExitCriteriaMet: Boolean
+    val isStopLossCriteriaMet: Boolean
+        /**
+         * Checks if stop loss criterion is met for current tick.
+         *
+         * @return true if met, false otherwise
+         */
+        get() = false
 
     /**
      * Adds stop loss criterion.
      *
      * @param criterion common criterion
      */
-    default void addStopLossCriterion(Criterion criterion) {
-    }
+    fun addStopLossCriterion(criterion: Criterion?) {}
 
     /**
      * Adds common criterion.
      *
      * @param criterion common criterion
      */
-    void addCommonCriterion(Criterion criterion);
+    fun addCommonCriterion(criterion: Criterion)
 
     /**
      * Adds entry criterion.
      *
      * @param criterion entry criterion
      */
-    void addEntryCriterion(Criterion criterion);
+    fun addEntryCriterion(criterion: Criterion)
 
     /**
      * Removes common criterion.
      *
      * @param criterion common criterion
      */
-    void removeCommonCriterion(Criterion criterion);
+    fun removeCommonCriterion(criterion: Criterion?)
 
     /**
      * Removes entry criterion.
      *
      * @param criterion entry criterion
      */
-    void removeEntryCriterion(Criterion criterion);
+    fun removeEntryCriterion(criterion: Criterion?)
 
     /**
      * Adds exit criterion.
      *
      * @param criterion exit criterion
      */
-    void addExitCriterion(Criterion criterion);
+    fun addExitCriterion(criterion: Criterion)
 
     /**
      * Remove exit criterion.
      *
      * @param criterion exit criterion
      */
-    void removeExitCriterion(Criterion criterion);
+    fun removeExitCriterion(criterion: Criterion?)
 
     /**
      * Returns additional data needed for back testing.
      *
-     * @return {@link BackTestResult} object
+     * @return [BackTestResult] object
      */
-    BackTestResult getBackTestResult();
+    val backTestResult: BackTestResult?
 
     /**
      * Add symbol to run strategy against.
      *
      * @param symbol contract symbol
      */
-    void addSymbol(String symbol);
+    fun addSymbol(symbol: String)
 
     /**
-     * Returns strategy {@link TradingContext}
+     * Returns strategy [TradingContext]
      *
      * @return
      */
-    TradingContext getTradingContext();
+    @JvmField
+    val tradingContext: TradingContext
 
     /**
-     * Opens position in one or several contracts when entry {@link Criterion} is met.
+     * Opens position in one or several contracts when entry [Criterion] is met.
      */
-    void openPosition() throws PriceNotAvailableException;
+    @Throws(PriceNotAvailableException::class)
+    fun openPosition()
 
     /**
-     * Closes position for contract when exit {@link Criterion} is met.
+     * Closes position for contract when exit [Criterion] is met.
      */
-    void closePosition() throws PriceNotAvailableException;
+    @Throws(PriceNotAvailableException::class)
+    fun closePosition()
 
+    companion object {
+        val log = LoggerFactory.getLogger(Strategy::class.java)
+    }
 }

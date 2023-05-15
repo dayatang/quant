@@ -1,43 +1,28 @@
-package org.lst.trading.lib.model;
+package org.lst.trading.lib.model
 
-import com.ib.client.OrderStatus;
-import io.codera.quant.config.ContractBuilder;
-import java.time.Instant;
+import com.ib.client.OrderStatus
+import io.codera.quant.config.ContractBuilder.Companion.getFutureMultiplier
+import java.time.Instant
 
-public interface Order {
-  int getId();
+interface Order {
+    val id: Int
+    val amount: Int
+    val openPrice: Double
+    val openInstant: Instant?
+    val instrument: String?
+    val orderStatus: OrderStatus?
+        get() = OrderStatus.Inactive
+    val isLong: Boolean
+        get() = amount > 0
+    val isShort: Boolean
+        get() = !isLong
+    val sign: Int
+        get() = if (isLong) 1 else -1
 
-  int getAmount();
-
-  double getOpenPrice();
-
-  Instant getOpenInstant();
-
-  String getInstrument();
-
-  default OrderStatus getOrderStatus(){
-    return OrderStatus.Inactive;
-  }
-
-  default boolean isLong() {
-    return getAmount() > 0;
-  }
-
-  default boolean isShort() {
-    return !isLong();
-  }
-
-  default int getSign() {
-    return isLong() ? 1 : -1;
-  }
-
-  default double calculatePl(double currentPrice) {
-
-    if(getInstrument().contains("=F")) {
-
-      return getAmount() * (currentPrice - getOpenPrice()) *
-          ContractBuilder.getFutureMultiplier(getInstrument());
+    fun calculatePl(currentPrice: Double): Double {
+        return if (instrument!!.contains("=F")) {
+            amount * (currentPrice - openPrice) *
+                    getFutureMultiplier(instrument)!!
+        } else amount * (currentPrice - openPrice)
     }
-    return getAmount() * (currentPrice - getOpenPrice());
-  }
 }

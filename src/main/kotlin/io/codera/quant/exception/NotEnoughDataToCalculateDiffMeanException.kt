@@ -1,7 +1,6 @@
-package io.codera.quant.exception;
+package io.codera.quant.exception
 
 /**
  * Created by beastie on 3/14/17.
  */
-public class NotEnoughDataToCalculateDiffMeanException extends Exception {
-}
+class NotEnoughDataToCalculateDiffMeanException : Exception()

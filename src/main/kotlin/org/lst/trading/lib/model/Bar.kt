@@ -1,35 +1,24 @@
-package org.lst.trading.lib.model;
+package org.lst.trading.lib.model
 
-import java.time.Duration;
-import java.time.Instant;
+import java.time.Duration
+import java.time.Instant
 
-public interface Bar extends Comparable<Bar> {
-    double getOpen();
+interface Bar : Comparable<Bar> {
+    val open: Double
+    val high: Double
+    val low: Double
+    val close: Double
+    val volume: Long
+    val start: Instant
+    val duration: Duration?
+    val wAP: Double
+    val average: Double
+        get() = (high + low) / 2
 
-    double getHigh();
-
-    double getLow();
-
-    double getClose();
-
-    long getVolume();
-
-    Instant getStart();
-
-    Duration getDuration();
-
-    double getWAP();
-
-    default double getAverage() {
-        return (getHigh() + getLow()) / 2;
+    override fun compareTo(o: Bar): Int {
+        return start.compareTo(o.start)
     }
 
-    @Override default int compareTo(Bar o) {
-        return getStart().compareTo(o.getStart());
-    }
-
-    default Instant getEnd() {
-        return getStart().plus(getDuration());
-    }
-
+    val end: Instant?
+        get() = start.plus(duration)
 }

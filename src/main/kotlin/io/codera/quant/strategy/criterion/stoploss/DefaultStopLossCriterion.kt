@@ -1,49 +1,42 @@
-package io.codera.quant.strategy.criterion.stoploss;
+package io.codera.quant.strategy.criterion.stoploss
 
-import io.codera.quant.context.TradingContext;
-import io.codera.quant.exception.CriterionViolationException;
-import io.codera.quant.exception.NoOrderAvailableException;
-import io.codera.quant.exception.PriceNotAvailableException;
-import io.codera.quant.strategy.Criterion;
-import java.util.List;
-import org.lst.trading.lib.model.Order;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.codera.quant.context.TradingContext
+import io.codera.quant.exception.CriterionViolationException
+import io.codera.quant.exception.NoOrderAvailableException
+import io.codera.quant.exception.PriceNotAvailableException
+import io.codera.quant.strategy.Criterion
+import org.slf4j.LoggerFactory
 
 /**
  *
  */
-public class DefaultStopLossCriterion implements Criterion {
+class DefaultStopLossCriterion(
+    private val symbols: List<String>, private val thresholdAmount: Double,
+    private val tradingContext: TradingContext
+) : Criterion {
+    @get:Throws(CriterionViolationException::class)
+    override val isMet: Boolean
+        get() {
+            // check if there are open orders
+            var totalPl = 0.0
+            for (symbol in symbols) {
+                totalPl += try {
+                    val order = tradingContext.getLastOrderBySymbol(symbol)
+                    val symbolPl =
+                        tradingContext.getLastPrice(symbol) * order!!.amount + order.openPrice * -order.amount
+                    log.debug("Symbol P/L: {}", symbolPl)
+                    symbolPl
+                } catch (noOrderAvailable: NoOrderAvailableException) {
+                    return false
+                } catch (noOrderAvailable: PriceNotAvailableException) {
+                    return false
+                }
+            }
+            log.debug("Total PL: {}", totalPl)
+            return totalPl <= thresholdAmount
+        }
 
-  private final double thresholdAmount;
-  private final TradingContext tradingContext;
-  private final List<String> symbols;
-  private static final Logger log = LoggerFactory.getLogger(DefaultStopLossCriterion.class);
-
-  public DefaultStopLossCriterion(List<String> symbols, double thresholdAmount,
-                                  TradingContext tradingContext) {
-    this.tradingContext = tradingContext;
-    this.thresholdAmount = thresholdAmount;
-    this.symbols = symbols;
-  }
-
-
-  @Override
-  public boolean isMet() throws CriterionViolationException {
-    // check if there are open orders
-    double totalPl = 0.0;
-    for(String symbol : symbols) {
-      try {
-        Order order = tradingContext.getLastOrderBySymbol(symbol);
-        double symbolPl = (tradingContext.getLastPrice(symbol) * order.getAmount())
-            + (order.getOpenPrice() * -order.getAmount());
-        log.debug("Symbol P/L: {}", symbolPl);
-        totalPl += symbolPl;
-      } catch (NoOrderAvailableException | PriceNotAvailableException noOrderAvailable) {
-        return false;
-      }
+    companion object {
+        private val log = LoggerFactory.getLogger(DefaultStopLossCriterion::class.java)
     }
-    log.debug("Total PL: {}", totalPl);
-    return totalPl <= thresholdAmount;
-  }
 }

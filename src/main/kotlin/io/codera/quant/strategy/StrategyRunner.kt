@@ -1,27 +1,22 @@
-package io.codera.quant.strategy;
-
-import io.codera.quant.context.TradingContext;
-import java.util.List;
+package io.codera.quant.strategy
 
 /**
- *  Runs strategy in defined trading context.
+ * Runs strategy in defined trading context.
  */
-public interface StrategyRunner {
+interface StrategyRunner {
+    /**
+     * Run specified [Strategy] for symbols collection in given [TradingContext].
+     *
+     * @param strategy strategy to run
+     * @param symbols list
+     */
+    fun run(strategy: Strategy, symbols: List<String>)
 
-  /**
-   * Run specified {@link Strategy} for symbols collection in given {@link TradingContext}.
-   *
-   * @param strategy strategy to run
-   * @param symbols list
-   */
-  void run(Strategy strategy, List<String> symbols);
-
-  /**
-   * Stop the specified strategy for specified symbols.
-   *
-   * @param strategy strategy to stop
-   * @param symbols symbols list
-   */
-  void stop(Strategy strategy, List<String> symbols);
-
+    /**
+     * Stop the specified strategy for specified symbols.
+     *
+     * @param strategy strategy to stop
+     * @param symbols symbols list
+     */
+    fun stop(strategy: Strategy?, symbols: List<String?>?)
 }

@@ -1,8 +1,8 @@
-package org.lst.trading.lib.util;
+package org.lst.trading.lib.util
 
-import org.lst.trading.lib.series.DoubleSeries;
-import rx.Observable;
+import org.lst.trading.lib.series.DoubleSeries
+import rx.Observable
 
-public interface HistoricalPriceService {
-    Observable<DoubleSeries> getHistoricalAdjustedPrices(String symbol);
+interface HistoricalPriceService {
+    fun getHistoricalAdjustedPrices(symbol: String): Observable<DoubleSeries?>
 }

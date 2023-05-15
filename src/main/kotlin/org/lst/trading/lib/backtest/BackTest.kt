@@ -1,176 +1,107 @@
-package org.lst.trading.lib.backtest;
+package org.lst.trading.lib.backtest
 
-import io.codera.quant.strategy.Strategy;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import org.lst.trading.lib.model.ClosedOrder;
-import org.lst.trading.lib.series.DoubleSeries;
-import org.lst.trading.lib.series.MultipleDoubleSeries;
-import org.lst.trading.lib.series.TimeSeries;
-import org.lst.trading.lib.util.Statistics;
+import io.codera.quant.strategy.Strategy
+import org.lst.trading.lib.model.ClosedOrder
+import org.lst.trading.lib.series.DoubleSeries
+import org.lst.trading.lib.series.MultipleDoubleSeries
+import org.lst.trading.lib.series.TimeSeries
+import org.lst.trading.lib.util.Statistics
+import org.lst.trading.lib.util.Util
+import java.util.*
 
-import static org.lst.trading.lib.util.Util.check;
+class BackTest(deposit: Double, priceSeries: MultipleDoubleSeries) {
+    class Result(
+        var pl: Double,
+        var plHistory: DoubleSeries?,
+        var marginHistory: DoubleSeries?,
+        var orders: List<ClosedOrder?>,
+        var initialFund: Double,
+        var finalValue: Double,
+        var commissions: Double
+    ) {
 
-public class BackTest {
-
-  public static class Result {
-    DoubleSeries mPlHistory;
-    DoubleSeries mMarginHistory;
-    double mPl;
-    List<ClosedOrder> mOrders;
-    double mInitialFund;
-    double mFinalValue;
-    double mCommissions;
-
-    public Result(double pl, DoubleSeries plHistory, DoubleSeries marginHistory, List<ClosedOrder> orders, double initialFund, double finalValue, double commisions) {
-      mPl = pl;
-      mPlHistory = plHistory;
-      mMarginHistory = marginHistory;
-      mOrders = orders;
-      mInitialFund = initialFund;
-      mFinalValue = finalValue;
-      mCommissions = commisions;
+        val accountValueHistory: DoubleSeries?
+            get() = plHistory!!.plus(initialFund)
+        val `return`: Double
+            get() = finalValue / initialFund - 1
+        val annualizedReturn: Double
+            get() = `return` * 250 / daysCount
+        val sharpe: Double
+            get() = Statistics.sharpe(Statistics.returns(accountValueHistory!!.toArray()))
+        val maxDrawdown: Double
+            get() = Statistics.drawdown(accountValueHistory!!.toArray())[0]
+        val maxDrawdownPercent: Double
+            get() = Statistics.drawdown(accountValueHistory!!.toArray())[1]
+        val daysCount: Int
+            get() = plHistory!!.size()
     }
 
-    public DoubleSeries getMarginHistory() {
-      return mMarginHistory;
+    var mPriceSeries: MultipleDoubleSeries
+    var mDeposit: Double
+    var leverage = 1.0
+    var mStrategy: Strategy? = null
+    var mContext: BackTestTradingContext? = null
+    var mPriceIterator: Iterator<TimeSeries.Entry<List<Double?>?>?>? = null
+    var result: Result? = null
+
+    init {
+        Util.check(priceSeries.isAscending)
+        mDeposit = deposit
+        mPriceSeries = priceSeries
     }
 
-    public double getInitialFund() {
-      return mInitialFund;
+    fun run(strategy: Strategy): Result? {
+        initialize(strategy)
+        while (nextStep());
+        return result
     }
 
-    public DoubleSeries getAccountValueHistory() {
-      return getPlHistory().plus(mInitialFund);
+    fun initialize(strategy: Strategy) {
+        mStrategy = strategy
+        mContext = strategy.tradingContext as BackTestTradingContext
+        mContext.mInstruments = mPriceSeries.names
+        mContext!!.mHistory = MultipleDoubleSeries(mContext.mInstruments)
+        mContext.mInitialFunds = mDeposit
+        mContext.mLeverage = leverage
+        mPriceIterator = mPriceSeries.iterator()
+        nextStep()
     }
 
-    public double getFinalValue() {
-      return mFinalValue;
+    fun nextStep(): Boolean {
+        if (!mPriceIterator!!.hasNext()) {
+            finish()
+            return false
+        }
+        val entry = mPriceIterator!!.next()
+        mContext!!.mPrices = entry.getItem()
+        mContext.mInstant = entry.getInstant()
+        mContext!!.mPl.add(mContext.getPl(), entry.getInstant())
+        mContext!!.mFundsHistory.add(mContext!!.availableFunds, entry.getInstant())
+        if (mContext!!.availableFunds < 0) {
+            finish()
+            return false
+        }
+        mStrategy!!.onTick()
+        mContext!!.mHistory!!.add(entry!!)
+        return true
     }
 
-    public double getReturn() {
-      return mFinalValue / mInitialFund - 1;
-    }
+    private fun finish() {
+        for (order in ArrayList(mContext!!.mOrders)) {
+            mContext!!.closeOrder(order)
+        }
 
-    public double getAnnualizedReturn() {
-      return getReturn() * 250 / getDaysCount();
-    }
-
-    public double getSharpe() {
-      return Statistics.sharpe(Statistics.returns(getAccountValueHistory().toArray()));
-    }
-
-    public double getMaxDrawdown() {
-      return Statistics.drawdown(getAccountValueHistory().toArray())[0];
-    }
-
-    public double getMaxDrawdownPercent() {
-      return Statistics.drawdown(getAccountValueHistory().toArray())[1];
-    }
-
-    public int getDaysCount() {
-      return mPlHistory.size();
-    }
-
-    public DoubleSeries getPlHistory() {
-      return mPlHistory;
-    }
-
-    public double getPl() {
-      return mPl;
-    }
-
-    public double getCommissions() {
-      return mCommissions;
-    }
-
-    public List<ClosedOrder> getOrders() {
-      return mOrders;
-    }
-  }
-
-  MultipleDoubleSeries mPriceSeries;
-  double mDeposit;
-  double mLeverage = 1;
-
-  Strategy mStrategy;
-  BackTestTradingContext mContext;
-
-  Iterator<TimeSeries.Entry<List<Double>>> mPriceIterator;
-  Result mResult;
-
-  public BackTest(double deposit, MultipleDoubleSeries priceSeries) {
-    check(priceSeries.isAscending());
-    mDeposit = deposit;
-    mPriceSeries = priceSeries;
-  }
-
-  public void setLeverage(double leverage) {
-    mLeverage = leverage;
-  }
-
-  public double getLeverage() {
-    return mLeverage;
-  }
-
-  public Result run(Strategy strategy) {
-    initialize(strategy);
-    while (nextStep()) ;
-    return mResult;
-  }
-
-  public void initialize(Strategy strategy) {
-    mStrategy = strategy;
-    mContext = (BackTestTradingContext) strategy.getTradingContext();
-
-    mContext.mInstruments = mPriceSeries.getNames();
-    mContext.mHistory = new MultipleDoubleSeries(mContext.mInstruments);
-    mContext.mInitialFunds = mDeposit;
-    mContext.mLeverage = mLeverage;
-
-    mPriceIterator = mPriceSeries.iterator();
-    nextStep();
-  }
-
-  public boolean nextStep() {
-    if (!mPriceIterator.hasNext()) {
-      finish();
-      return false;
-    }
-
-    TimeSeries.Entry<List<Double>> entry = mPriceIterator.next();
-
-    mContext.mPrices = entry.getItem();
-    mContext.mInstant = entry.getInstant();
-    mContext.mPl.add(mContext.getPl(), entry.getInstant());
-    mContext.mFundsHistory.add(mContext.getAvailableFunds(), entry.getInstant());
-    if (mContext.getAvailableFunds() < 0) {
-      finish();
-      return false;
-    }
-
-    mStrategy.onTick();
-
-    mContext.mHistory.add(entry);
-
-    return true;
-  }
-
-  public Result getResult() {
-    return mResult;
-  }
-
-  private void finish() {
-    for (SimpleOrder order : new ArrayList<>(mContext.mOrders)) {
-      mContext.closeOrder(order);
-    }
-
-    // TODO (replace below code with BackTest results implementation
+        // TODO (replace below code with BackTest results implementation
 //        mStrategy.onEnd();
-
-    List<ClosedOrder> orders = Collections.unmodifiableList(mContext.mClosedOrders);
-    mResult = new Result(mContext.mClosedPl, mContext.mPl, mContext.mFundsHistory, orders, mDeposit, mDeposit + mContext.mClosedPl, mContext.mCommissions);
-  }
+        val orders = Collections.unmodifiableList<ClosedOrder?>(mContext!!.mClosedOrders)
+        result = Result(
+            mContext!!.mClosedPl,
+            mContext!!.mPl,
+            mContext!!.mFundsHistory,
+            orders,
+            mDeposit,
+            mDeposit + mContext!!.mClosedPl,
+            mContext!!.mCommissions
+        )
+    }
 }

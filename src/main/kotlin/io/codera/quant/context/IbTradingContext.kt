@@ -1,406 +1,347 @@
-package io.codera.quant.context;
+package io.codera.quant.context
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.ib.client.Contract;
-import com.ib.client.OrderState;
-import com.ib.client.OrderStatus;
-import com.ib.client.OrderType;
-import com.ib.client.TickType;
-import com.ib.client.Types;
-import com.ib.controller.ApiController;
-import io.codera.quant.config.ContractBuilder;
-import io.codera.quant.exception.NoOrderAvailableException;
-import io.codera.quant.exception.PriceNotAvailableException;
-import io.codera.quant.observers.HistoryObserver;
-import io.codera.quant.observers.IbAccountObserver;
-import io.codera.quant.observers.IbHistoryObserver;
-import io.codera.quant.observers.IbMarketDataObserver;
-import io.codera.quant.observers.IbOrderObserver;
-import io.codera.quant.observers.MarketDataObserver;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import org.lst.trading.lib.backtest.SimpleClosedOrder;
-import org.lst.trading.lib.backtest.SimpleOrder;
-import org.lst.trading.lib.model.ClosedOrder;
-import org.lst.trading.lib.model.Order;
-import org.lst.trading.lib.series.DoubleSeries;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import rx.Observable;
-import rx.Subscriber;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import com.google.common.base.Preconditions
+import com.google.common.collect.Lists
+import com.google.common.collect.Maps
+import com.ib.client.*
+import com.ib.controller.ApiController
+import io.codera.quant.config.ContractBuilder
+import io.codera.quant.context.IbTradingContext
+import io.codera.quant.exception.NoOrderAvailableException
+import io.codera.quant.exception.PriceNotAvailableException
+import io.codera.quant.observers.*
+import io.codera.quant.observers.MarketDataObserver.Price
+import org.lst.trading.lib.backtest.SimpleClosedOrder
+import org.lst.trading.lib.backtest.SimpleOrder
+import org.lst.trading.lib.model.ClosedOrder
+import org.lst.trading.lib.model.Order
+import org.lst.trading.lib.series.DoubleSeries
+import org.slf4j.LoggerFactory
+import rx.Observable
+import rx.Subscriber
+import java.math.BigDecimal
+import java.math.RoundingMode
+import java.sql.Connection
+import java.sql.SQLException
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Interactive Brokers trading context.
  */
-public class IbTradingContext implements TradingContext {
+class IbTradingContext private constructor(
+    private val controller: ApiController,
+    private val contractBuilder: ContractBuilder,
+    private override val leverage: Int,
+    private var orderType: OrderType
+) : TradingContext {
+    private override var contracts: MutableList<String>
+    private var ibContracts: MutableMap<String?, Contract?>
+    private var ibOrders: MutableMap<String?, Order>
+    private var contractPrices: MutableMap<String?, MutableMap<TickType?, Double>>
+    private var observers: MutableMap<String?, MarketDataObserver>
+    private val orderId = AtomicInteger(0)
+    override var availableFunds = 0.0
+        private set
+    override var netValue = 0.0
+        private set
+    private var connection: Connection? = null
 
-  private List<String> contracts;
-  private Map<String, Contract> ibContracts;
-  private Map<String, Order> ibOrders;
-  private final ApiController controller;
-  private Map<String, Map<TickType, Double>> contractPrices;
-  private Map<String, MarketDataObserver> observers;
-  private OrderType orderType;
-  private AtomicInteger orderId = new AtomicInteger(0);
-  private double availableFunds;
-  private double netValue;
-  private int leverage;
-  private final ContractBuilder contractBuilder;
-  private Connection connection;
-
-  private static final Logger log = LoggerFactory.getLogger(IbTradingContext.class);
-
-  private IbTradingContext(ApiController controller,
-                           ContractBuilder contractBuilder,
-                           int leverage,
-                           OrderType orderType) {
-    this.controller = controller;
-    this.contractBuilder = contractBuilder;
-    this.leverage = leverage;
-    this.orderType = orderType;
-  }
-
-  public IbTradingContext(ApiController controller,
-                          ContractBuilder contractBuilder,
-                          OrderType orderType,
-                          int leverage) {
-    this(controller, contractBuilder, leverage, orderType);
-    this.contracts = Lists.newArrayList();
-    this.contractPrices = Maps.newConcurrentMap();
-
-    this.observers = Maps.newConcurrentMap();
-    this.ibContracts = Maps.newConcurrentMap();
-    this.ibOrders = Maps.newConcurrentMap();
-    IbAccountObserver accountObserver = new IbAccountObserver(this);
-    accountObserver
-        .observableCashBalance().subscribe(aDouble -> availableFunds = aDouble);
-    accountObserver
-        .observableNetValue().subscribe(aDouble -> netValue = aDouble);
-    controller.reqAccountUpdates(true, "", accountObserver);
-  }
-
-  public IbTradingContext(ApiController controller,
-                          ContractBuilder contractBuilder,
-                          OrderType orderType,
-                          Connection connection,
-                          int leverage) {
-    this(controller, contractBuilder, orderType, leverage);
-    this.connection = connection;
-  }
-
-  @Override
-  public double getLastPrice(String contract) throws PriceNotAvailableException {
-    checkArgument(contract != null, "contract is null");
-    if(!contractPrices.containsKey(contract) ||
-        !contractPrices.get(contract).containsKey(TickType.ASK)) {
-      throw new PriceNotAvailableException();
+    constructor(
+        controller: ApiController,
+        contractBuilder: ContractBuilder,
+        orderType: OrderType,
+        leverage: Int
+    ) : this(controller, contractBuilder, leverage, orderType) {
+        contracts = Lists.newArrayList()
+        contractPrices = Maps.newConcurrentMap()
+        observers = Maps.newConcurrentMap()
+        ibContracts = Maps.newConcurrentMap()
+        ibOrders = Maps.newConcurrentMap()
+        val accountObserver = IbAccountObserver()
+        accountObserver
+            .observableCashBalance().subscribe { aDouble: Double -> availableFunds = aDouble }
+        accountObserver
+            .observableNetValue().subscribe { aDouble: Double -> netValue = aDouble }
+        controller.reqAccountUpdates(true, "", accountObserver)
     }
-    double price = contractPrices.get(contract).get(TickType.ASK);
-    if (connection != null) {
-      try {
-        String sql = "INSERT INTO quotes (symbol, price) VALUES (?, ?)";
-        PreparedStatement stmt = connection.prepareStatement(sql);
-        stmt.setString(1, contract);
-        stmt.setDouble(2, price);
-        stmt.execute();
 
-      } catch (SQLException e) {
-        log.error("Could not insert record into database: " + contract + " - " + price, e);
-      }
-
+    constructor(
+        controller: ApiController,
+        contractBuilder: ContractBuilder,
+        orderType: OrderType,
+        connection: Connection?,
+        leverage: Int
+    ) : this(controller, contractBuilder, orderType, leverage) {
+        this.connection = connection
     }
-    return contractPrices.get(contract).get(TickType.ASK);
-  }
 
-  public double getLastPrice(String contract, TickType tickType) throws PriceNotAvailableException {
-    checkArgument(contract != null, "contract is null");
-    checkArgument(tickType != null, "tickType is null");
-    if(!contractPrices.containsKey(contract) || !contractPrices.get(contract).
-        containsKey(tickType)) {
-      throw new PriceNotAvailableException();
+    @Throws(PriceNotAvailableException::class)
+    override fun getLastPrice(contract: String?): Double {
+        Preconditions.checkArgument(contract != null, "contract is null")
+        if (!contractPrices.containsKey(contract) ||
+            !contractPrices[contract]!!.containsKey(TickType.ASK)
+        ) {
+            throw PriceNotAvailableException()
+        }
+        val price = contractPrices[contract]!![TickType.ASK]!!
+        if (connection != null) {
+            try {
+                val sql = "INSERT INTO quotes (symbol, price) VALUES (?, ?)"
+                val stmt = connection!!.prepareStatement(sql)
+                stmt.setString(1, contract)
+                stmt.setDouble(2, price)
+                stmt.execute()
+            } catch (e: SQLException) {
+                log.error("Could not insert record into database: $contract - $price", e)
+            }
+        }
+        return contractPrices[contract]!![TickType.ASK]!!
     }
-    return contractPrices.get(contract).get(tickType);
-  }
 
-  @Override
-  public void addContract(String contractSymbol) {
-    contracts.add(contractSymbol);
+    @Throws(PriceNotAvailableException::class)
+    fun getLastPrice(contract: String?, tickType: TickType?): Double {
+        Preconditions.checkArgument(contract != null, "contract is null")
+        Preconditions.checkArgument(tickType != null, "tickType is null")
+        if (!contractPrices.containsKey(contract) || !contractPrices[contract]!!.containsKey(tickType)) {
+            throw PriceNotAvailableException()
+        }
+        return contractPrices[contract]!![tickType]!!
+    }
 
-    IbMarketDataObserver marketDataObserver = new IbMarketDataObserver(contractSymbol);
-    observers.put(contractSymbol, marketDataObserver);
+    override fun addContract(contractSymbol: String) {
+        contracts.add(contractSymbol)
+        val marketDataObserver = IbMarketDataObserver(contractSymbol)
+        observers[contractSymbol] = marketDataObserver
+        val contract = contractBuilder.build(contractSymbol)
+        ibContracts[contractSymbol] = contract
+        controller.reqTopMktData(contract, "", false, false, marketDataObserver)
+        marketDataObserver.priceObservable().subscribe(object : Subscriber<Price?>() {
+            override fun onCompleted() {}
+            override fun onError(throwable: Throwable) {}
+            override fun onNext(price: Price) {
+                if (contractPrices.containsKey(contractSymbol)) {
+                    contractPrices[contractSymbol]!![price.tickType] = price.price
+                } else {
+                    val map: MutableMap<TickType?, Double> = Maps.newConcurrentMap()
+                    map[price.tickType] = price.price
+                    contractPrices[contractSymbol] = map
+                }
+            }
+        })
+    }
 
-    Contract contract = contractBuilder.build(contractSymbol);
-    ibContracts.put(contractSymbol, contract);
+    override fun removeContract(contractSymbol: String) {
+        contracts.remove(contractSymbol)
+        contractPrices.remove(contractSymbol)
+        ibContracts.remove(contractSymbol)
+        controller.cancelTopMktData(observers[contractSymbol])
+    }
 
-    controller.reqTopMktData(contract, "", false, false, marketDataObserver);
+    override fun getContracts(): List<String> {
+        return contracts
+    }
 
-    marketDataObserver.priceObservable().subscribe(new Subscriber<MarketDataObserver.Price>() {
-      @Override
-      public void onCompleted() {}
-      @Override
-      public void onError(Throwable throwable) {}
+    override fun getLeverage(): Double {
+        return leverage.toDouble()
+    }
 
-      @Override
-      public void onNext(MarketDataObserver.Price price) {
-        if(contractPrices.containsKey(contractSymbol)) {
-          contractPrices.get(contractSymbol).put(price.getTickType(), price.getPrice());
+    override fun getObserver(contractSymbol: String?): MarketDataObserver? {
+        Preconditions.checkArgument(contractSymbol != null, "contractSymbol is null")
+        return observers[contractSymbol]
+    }
+
+    @Throws(PriceNotAvailableException::class)
+    override fun placeOrder(contractSymbol: String?, buy: Boolean, amount: Int): Order {
+        Preconditions.checkArgument(contractSymbol != null, "contractSymbol is null")
+        val order = IbOrder(
+            orderId.getAndIncrement(),
+            contractSymbol,
+            Instant.now(),
+            getLastPrice(contractSymbol),
+            if (buy) amount else -amount,
+            submitIbOrder(contractSymbol, buy, amount, getLastPrice(contractSymbol))
+        )
+        ibOrders[contractSymbol] = order
+        return order
+    }
+
+    @Throws(PriceNotAvailableException::class)
+    override fun closeOrder(order: Order?): ClosedOrder {
+        Preconditions.checkArgument(order != null, "order is null")
+        log.debug(
+            "Amount taken from {} order that isLong {} : {}", order!!.instrument,
+            order.isLong,
+            order.amount
+        )
+        val closedOrder = IbClosedOrder(
+            order as SimpleOrder?,
+            Instant.now(),
+            getLastPrice(order.instrument),
+            submitIbOrder(
+                order.instrument,
+                order.isShort,
+                order.amount,
+                getLastPrice(order.instrument)
+            )
+        )
+        ibOrders.remove(order.instrument)
+        ibOrders[order.instrument] = closedOrder
+        return closedOrder
+    }
+
+    fun setOrderType(orderType: OrderType) {
+        this.orderType = orderType
+    }
+
+    @Throws(NoOrderAvailableException::class)
+    override fun getLastOrderBySymbol(symbol: String?): Order? {
+        Preconditions.checkArgument(symbol != null, "symbol is null")
+        if (!ibOrders.containsKey(symbol)) {
+            throw NoOrderAvailableException()
+        }
+        return ibOrders[symbol]
+    }
+
+    override fun getHistory(symbol: String, daysOfHistory: Int): DoubleSeries? {
+        val formatter = DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss")
+        val date = LocalDateTime.now().format(formatter)
+        val contractBuilder = ContractBuilder()
+        val contract = contractBuilder.build(symbol)
+        val historyObserver = IbHistoryObserver(symbol)
+        controller.reqHistoricalData(
+            contract, date, daysOfHistory, Types.DurationUnit.DAY,
+            Types.BarSize._1_min, Types.WhatToShow.TRADES, false, false, historyObserver
+        )
+        return historyObserver.observableDoubleSeries()
+            .toBlocking()
+            .first()
+    }
+
+    override fun getHistoryInMinutes(symbol: String, numberOfMinutes: Int): DoubleSeries? {
+        val formatter = DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss")
+        val date = LocalDateTime.now().format(formatter)
+        val contractBuilder = ContractBuilder()
+        val contract = contractBuilder.build(symbol)
+        val historyObserver: HistoryObserver = IbHistoryObserver(symbol)
+        controller.reqHistoricalData(
+            contract, date, numberOfMinutes * 60, Types.DurationUnit.SECOND,
+            Types.BarSize._1_min, Types.WhatToShow.TRADES, false, false, historyObserver
+        )
+        var history = (historyObserver as IbHistoryObserver).observableDoubleSeries()
+            .toBlocking()
+            .first()
+        // We might need to pull history for last day if time of request is after market is closed
+        if (history!!.size() == 0 || history.size() < numberOfMinutes) {
+            controller.reqHistoricalData(
+                contract, date, 1, Types.DurationUnit.DAY,
+                Types.BarSize._1_min, Types.WhatToShow.TRADES, false, false, historyObserver
+            )
+            history = historyObserver.observableDoubleSeries()
+                .toBlocking()
+                .first()
+            return history!!.tail(numberOfMinutes)
+        }
+        return history
+    }
+
+    private fun submitIbOrder(
+        contractSymbol: String?,
+        buy: Boolean,
+        amount: Int,
+        price: Double
+    ): Observable<OrderState?>? {
+        var amount = amount
+        val ibOrder = Order()
+        if (buy) {
+            ibOrder.action(Types.Action.BUY)
         } else {
-          Map<TickType, Double> map = Maps.newConcurrentMap();
-          map.put(price.getTickType(), price.getPrice());
-          contractPrices.put(contractSymbol, map);
+            ibOrder.action(Types.Action.SELL)
+            amount = -amount
+        }
+        ibOrder.orderType(orderType)
+        if (orderType == OrderType.LMT) {
+            ibOrder.lmtPrice(price)
+        }
+        ibOrder.totalQuantity(Math.abs(amount).toDouble())
+        val orderObserver = IbOrderObserver()
+        log.debug("Sending order for {} in amount of {}", contractSymbol, amount)
+        controller.placeOrModifyOrder(ibContracts[contractSymbol], ibOrder, orderObserver)
+        return orderObserver.observableOrderState()
+    }
+
+    inner class IbOrder(
+        id: Int,
+        contractSymbol: String?,
+        openInstant: Instant?,
+        openPrice: Double,
+        amount: Int,
+        observableOrderState: Observable<OrderState?>?
+    ) : SimpleOrder(id, contractSymbol, openInstant, openPrice, amount) {
+        private var orderStatus: OrderStatus
+
+        init {
+            orderStatus = OrderStatus.Inactive
+            observableOrderState!!.subscribe { newOrderState: OrderState? -> orderStatus = newOrderState!!.status() }
+            log.info("{} OPEN order in amount of {} at price {}", contractSymbol, amount, openPrice)
         }
 
-      }
-    });
-  }
-
-  @Override
-  public void removeContract(String contractSymbol) {
-    contracts.remove(contractSymbol);
-    contractPrices.remove(contractSymbol);
-    ibContracts.remove(contractSymbol);
-    controller.cancelTopMktData(observers.get(contractSymbol));
-  }
-
-  @Override
-  public List<String> getContracts() {
-    return contracts;
-  }
-
-  @Override
-  public double getAvailableFunds() {
-    return availableFunds;
-  }
-
-  @Override
-  public double getNetValue() {
-    return netValue;
-  }
-
-  @Override
-  public double getLeverage() {
-    return leverage;
-  }
-
-  @Override
-  public MarketDataObserver getObserver(String contractSymbol) {
-    checkArgument(contractSymbol != null, "contractSymbol is null");
-
-    return observers.get(contractSymbol);
-  }
-
-  @Override
-  public Order placeOrder(String contractSymbol, boolean buy, int amount)
-      throws PriceNotAvailableException {
-    checkArgument(contractSymbol != null, "contractSymbol is null");
-
-    Order order = new IbOrder(
-        orderId.getAndIncrement(),
-        contractSymbol,
-        Instant.now(),
-        getLastPrice(contractSymbol),
-        buy ? amount : -amount,
-        submitIbOrder(contractSymbol, buy, amount, getLastPrice(contractSymbol))
-    );
-
-    ibOrders.put(contractSymbol, order);
-
-    return order;
-  }
-
-  @Override
-  public ClosedOrder closeOrder(Order order) throws PriceNotAvailableException {
-    checkArgument(order != null, "order is null");
-
-    log.debug("Amount taken from {} order that isLong {} : {}", order.getInstrument(),
-        order.isLong(),
-        order.getAmount());
-
-    IbClosedOrder closedOrder = new IbClosedOrder(
-        (SimpleOrder) order,
-        Instant.now(),
-        getLastPrice(order.getInstrument()),
-        submitIbOrder(
-            order.getInstrument(),
-            order.isShort(),
-            order.getAmount(),
-            getLastPrice(order.getInstrument())));
-
-    ibOrders.remove(order.getInstrument());
-    ibOrders.put(order.getInstrument(), closedOrder);
-
-    return closedOrder;
-
-  }
-
-  public void setOrderType(OrderType orderType) {
-    this.orderType = orderType;
-  }
-
-  public Order getLastOrderBySymbol(String symbol) throws NoOrderAvailableException {
-    checkArgument(symbol != null, "symbol is null");
-    if(!ibOrders.containsKey(symbol)) {
-      throw new NoOrderAvailableException();
-    }
-    return ibOrders.get(symbol);
-  }
-
-  public DoubleSeries getHistory(String symbol, int daysOfHistory) {
-    DateTimeFormatter formatter =
-        DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss");
-    String date = LocalDateTime.now().format(formatter);
-
-    ContractBuilder contractBuilder = new ContractBuilder();
-
-    Contract contract = contractBuilder.build(symbol);
-    IbHistoryObserver historyObserver = new IbHistoryObserver(symbol);
-    controller.reqHistoricalData(contract, date, daysOfHistory, Types.DurationUnit.DAY,
-        Types.BarSize._1_min, Types.WhatToShow.TRADES, false, false, historyObserver);
-    return historyObserver.observableDoubleSeries()
-        .toBlocking()
-        .first();
-
-  }
-
-  public DoubleSeries getHistoryInMinutes(String symbol, int numberOfMinutes) {
-    DateTimeFormatter formatter =
-        DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss");
-    String date = LocalDateTime.now().format(formatter);
-    ContractBuilder contractBuilder = new ContractBuilder();
-
-    Contract contract = contractBuilder.build(symbol);
-    HistoryObserver historyObserver = new IbHistoryObserver(symbol);
-    controller.reqHistoricalData(contract, date, numberOfMinutes * 60, Types.DurationUnit.SECOND,
-        Types.BarSize._1_min, Types.WhatToShow.TRADES, false, false, historyObserver);
-
-    DoubleSeries history = ((IbHistoryObserver) historyObserver).observableDoubleSeries()
-        .toBlocking()
-        .first();
-    // We might need to pull history for last day if time of request is after market is closed
-    if(history.size() == 0 || history.size() < numberOfMinutes) {
-      controller.reqHistoricalData(contract, date, 1, Types.DurationUnit.DAY,
-          Types.BarSize._1_min, Types.WhatToShow.TRADES, false, false, historyObserver);
-
-      history = ((IbHistoryObserver) historyObserver).observableDoubleSeries()
-          .toBlocking()
-          .first();
-
-      return history.tail(numberOfMinutes);
-    }
-
-    return history;
-  }
-
-  private Observable<OrderState> submitIbOrder(String contractSymbol, boolean buy, int amount, double price) {
-    com.ib.client.Order ibOrder = new com.ib.client.Order();
-
-    if(buy) {
-      ibOrder.action(Types.Action.BUY);
-    } else {
-      ibOrder.action(Types.Action.SELL);
-      amount = -amount;
-    }
-
-    ibOrder.orderType(orderType);
-    if(orderType == OrderType.LMT) {
-      ibOrder.lmtPrice(price);
-    }
-    ibOrder.totalQuantity(Math.abs(amount));
-
-    IbOrderObserver orderObserver = new IbOrderObserver();
-    log.debug("Sending order for {} in amount of {}", contractSymbol, amount);
-
-    controller.placeOrModifyOrder(ibContracts.get(contractSymbol), ibOrder, orderObserver);
-
-    return orderObserver.observableOrderState();
-  }
-
-  public class IbOrder extends SimpleOrder {
-
-    private OrderStatus orderStatus;
-
-    public IbOrder(int id,
-                   String contractSymbol,
-                   Instant openInstant,
-                   double openPrice,
-                   int amount,
-                   Observable<OrderState> observableOrderState) {
-      super(id, contractSymbol, openInstant, openPrice, amount);
-      this.orderStatus = OrderStatus.Inactive;
-      observableOrderState.subscribe(newOrderState -> orderStatus = newOrderState.status());
-      log.info("{} OPEN order in amount of {} at price {}", contractSymbol, amount, openPrice);
-    }
-
-    public OrderStatus getOrderStatus() {
-      return orderStatus;
-    }
-
-  }
-  public class IbClosedOrder extends SimpleClosedOrder {
-
-    private OrderStatus orderStatus;
-
-    public IbClosedOrder(SimpleOrder simpleOrder,
-                         Instant closeInstant,
-                         double closePrice,
-                         Observable<OrderState> observableOrderState) {
-      super(simpleOrder, closePrice, closeInstant);
-      this.orderStatus = OrderStatus.Inactive;
-      observableOrderState.subscribe(newOrderState -> {
-        orderStatus = newOrderState.status();
-        if(newOrderState.status() == OrderStatus.Filled) {
-          ibOrders.remove(simpleOrder.getInstrument());
+        override fun getOrderStatus(): OrderStatus {
+            return orderStatus
         }
-      });
-      log.info("{} CLOSE order in amount of {} at price {}",
-          simpleOrder.getInstrument(), -simpleOrder.getAmount(), closePrice);
     }
 
-    public OrderStatus getOrderStatus() {
-      return orderStatus;
+    inner class IbClosedOrder(
+        simpleOrder: SimpleOrder?,
+        closeInstant: Instant?,
+        closePrice: Double,
+        observableOrderState: Observable<OrderState?>?
+    ) : SimpleClosedOrder(simpleOrder, closePrice, closeInstant) {
+        private var orderStatus: OrderStatus
+
+        init {
+            orderStatus = OrderStatus.Inactive
+            observableOrderState!!.subscribe { newOrderState: OrderState? ->
+                orderStatus = newOrderState!!.status()
+                if (newOrderState.status() == OrderStatus.Filled) {
+                    ibOrders.remove(simpleOrder!!.instrument)
+                }
+            }
+            log.info(
+                "{} CLOSE order in amount of {} at price {}",
+                simpleOrder!!.instrument, -simpleOrder.amount, closePrice
+            )
+        }
+
+        override fun getOrderStatus(): OrderStatus {
+            return orderStatus
+        }
     }
 
-  }
+    @Throws(PriceNotAvailableException::class)
+    override fun getChangeBySymbol(symbol: String?): Double {
+        val closePrice = getLastPrice(symbol, TickType.CLOSE)
+        val currentPrice = getLastPrice(symbol)
+        val diff = BigDecimal.valueOf(currentPrice).add(BigDecimal.valueOf(-closePrice))
+        val res = diff.multiply(BigDecimal.valueOf(100))
+            .divide(BigDecimal.valueOf(closePrice), RoundingMode.HALF_UP)
+        val rounded = res.setScale(2, RoundingMode.HALF_UP)
+        return rounded.toDouble()
+    }
 
-  @Override
-  public double getChangeBySymbol(String symbol) throws PriceNotAvailableException {
+    @Throws(PriceNotAvailableException::class)
+    fun getChangeBySymbol(symbol: String?, price: Double): Double {
+        val closePrice = getLastPrice(symbol, TickType.CLOSE)
+        val diff = BigDecimal.valueOf(price).add(BigDecimal.valueOf(-closePrice))
+        val res = diff.multiply(BigDecimal.valueOf(100))
+            .divide(BigDecimal.valueOf(closePrice), RoundingMode.HALF_UP)
+        val rounded = res.setScale(2, RoundingMode.HALF_UP)
+        return rounded.toDouble()
+    }
 
-    double closePrice = getLastPrice(symbol, TickType.CLOSE);
-    double currentPrice = getLastPrice(symbol);
-
-    BigDecimal diff = BigDecimal.valueOf(currentPrice).add(BigDecimal.valueOf(-closePrice));
-
-    BigDecimal res = diff.multiply(BigDecimal.valueOf(100))
-        .divide(BigDecimal.valueOf(closePrice), RoundingMode.HALF_UP);
-    BigDecimal rounded = res.setScale(2, RoundingMode.HALF_UP);
-    return rounded.doubleValue();
-
-  }
-
-  public double getChangeBySymbol(String symbol, double price) throws PriceNotAvailableException {
-
-    double closePrice = getLastPrice(symbol, TickType.CLOSE);
-
-    BigDecimal diff = BigDecimal.valueOf(price).add(BigDecimal.valueOf(-closePrice));
-
-    BigDecimal res = diff.multiply(BigDecimal.valueOf(100))
-        .divide(BigDecimal.valueOf(closePrice), RoundingMode.HALF_UP);
-    BigDecimal rounded = res.setScale(2, RoundingMode.HALF_UP);
-    return rounded.doubleValue();
-
-  }
-
+    companion object {
+        private val log = LoggerFactory.getLogger(IbTradingContext::class.java)
+    }
 }

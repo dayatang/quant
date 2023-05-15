@@ -1,45 +1,45 @@
-package io.codera.quant.observers;
+package io.codera.quant.observers
 
-import com.ib.controller.ApiController.IAccountHandler;
-import com.ib.controller.Position;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.ib.controller.ApiController.IAccountHandler
+import com.ib.controller.Position
+import org.slf4j.LoggerFactory
 
 /**
  *
  */
-public interface AccountObserver extends IAccountHandler {
-
-  Logger logger = LoggerFactory.getLogger(AccountObserver.class);
-
-  default void accountValue(String account, String key, String value, String currency) {
-    final String format = String.format("account: %s, key: %s, value: %s, currency: %s",
-            account, key, value, currency);
-    if(key.equals("NetLiquidation") && currency.equals("USD")) {
-      logger.debug(format);
-      setNetValue(Double.valueOf(value));
+interface AccountObserver : IAccountHandler {
+    override fun accountValue(account: String, key: String, value: String, currency: String) {
+        val format = String.format(
+            "account: %s, key: %s, value: %s, currency: %s",
+            account, key, value, currency
+        )
+        if (key == "NetLiquidation" && currency == "USD") {
+            logger.debug(format)
+            setNetValue(java.lang.Double.valueOf(value))
+        }
+        if (key == "AvailableFunds" && currency == "USD") {
+            logger.debug(format)
+            setCashBalance(java.lang.Double.valueOf(value))
+        }
     }
-    if(key.equals("AvailableFunds") && currency.equals("USD")) {
-      logger.debug(format);
-      setCashBalance(Double.valueOf(value));
+
+    override fun accountTime(timeStamp: String) {
+        logger.debug(String.format("account time: %s", timeStamp))
     }
-  }
 
-  default void accountTime(String timeStamp) {
-    logger.debug(String.format("account time: %s", timeStamp));
-  }
+    override fun accountDownloadEnd(account: String) {
+        logger.debug(String.format("account download end: %s", account))
+    }
 
-  default void accountDownloadEnd(String account) {
-    logger.debug(String.format("account download end: %s", account));
-  }
+    override fun updatePortfolio(position: Position) {
+        updateSymbolPosition(position.contract().symbol(), position.position())
+    }
 
-  @Override
-  default void updatePortfolio(Position position) {
-    updateSymbolPosition(position.contract().symbol(), position.position());
-  }
+    fun setCashBalance(balance: Double)
+    fun setNetValue(netValue: Double)
+    fun updateSymbolPosition(symbol: String?, position: Double)
 
-  void setCashBalance(double balance);
-  void setNetValue(double netValue);
-  void updateSymbolPosition(String symbol, double position);
-
+    companion object {
+        val logger = LoggerFactory.getLogger(AccountObserver::class.java)
+    }
 }

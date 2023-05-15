@@ -1,122 +1,87 @@
-package io.codera.quant.strategy;
+package io.codera.quant.strategy
 
-import com.google.common.collect.Lists;
-import io.codera.quant.context.TradingContext;
-import io.codera.quant.exception.CriterionViolationException;
-import java.util.List;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import com.google.common.base.Preconditions
+import com.google.common.collect.Lists
+import io.codera.quant.context.TradingContext
+import io.codera.quant.exception.CriterionViolationException
 
 /**
- *  Abstract strategy class.
+ * Abstract strategy class.
  */
-public abstract class AbstractStrategy implements Strategy {
+abstract class AbstractStrategy(override val tradingContext: TradingContext) : Strategy {
+    protected var commonCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
+    protected var entryCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
+    protected var exitCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
+    protected var stopLossCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
+    protected var symbols: MutableList<String> = Lists.newLinkedList()
 
-  protected List<Criterion> commonCriteria = Lists.newCopyOnWriteArrayList();
-  protected List<Criterion> entryCriteria = Lists.newCopyOnWriteArrayList();
-  protected List<Criterion> exitCriteria = Lists.newCopyOnWriteArrayList();
-  protected List<Criterion> stopLossCriteria = Lists.newCopyOnWriteArrayList();
-  protected List<String> symbols = Lists.newLinkedList();
-  protected final TradingContext tradingContext;
-
-  public AbstractStrategy(TradingContext tradingContext) {
-    this.tradingContext = tradingContext;
-  }
-
-  @Override
-  public void addEntryCriterion(Criterion criterion) {
-    criterion.init();
-    entryCriteria.add(criterion);
-  }
-
-  @Override
-  public void removeEntryCriterion(Criterion criterion) {
-    entryCriteria.remove(criterion);
-  }
-
-  @Override
-  public void addCommonCriterion(Criterion criterion) {
-    criterion.init();
-    commonCriteria.add(criterion);
-  }
-
-  @Override
-  public void removeCommonCriterion(Criterion criterion) {
-    commonCriteria.remove(criterion);
-  }
-
-
-  @Override
-  public void addExitCriterion(Criterion criterion) {
-    criterion.init();
-    exitCriteria.add(criterion);
-  }
-
-  @Override
-  public void removeExitCriterion(Criterion criterion) {
-    exitCriteria.remove(criterion);
-  }
-
-  @Override
-  public boolean isCommonCriteriaMet() {
-    return testCriteria(commonCriteria);
-  }
-
-  @Override
-  public boolean isEntryCriteriaMet() {
-    return testCriteria(entryCriteria);
-  }
-
-  @Override
-  public boolean isExitCriteriaMet() {
-    return !exitCriteria.isEmpty() && testCriteria(exitCriteria);
-  }
-
-  @Override
-  public boolean isStopLossCriteriaMet() {
-    return !stopLossCriteria.isEmpty() && testCriteria(stopLossCriteria);
-  }
-
-  @Override
-  public void addStopLossCriterion(Criterion criterion) {
-    checkArgument(criterion != null, "criterion is null");
-
-    stopLossCriteria.add(criterion);
-  }
-
-  @Override
-  public BackTestResult getBackTestResult() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void addSymbol(String symbol) {
-    symbols.add(symbol);
-    tradingContext.addContract(symbol);
-  }
-
-  @Override
-  public TradingContext getTradingContext() {
-    return tradingContext;
-  }
-
-  private boolean testCriteria(List<Criterion> criteria) {
-    if(criteria.size() == 0) {
-      return true;
+    override fun addEntryCriterion(criterion: Criterion) {
+        criterion.init()
+        entryCriteria.add(criterion)
     }
 
-    for(Criterion criterion: criteria) {
-      try {
-        if(!criterion.isMet()) {
-          log.debug("{} criterion was NOT met", criterion.getClass().getName());
-          return false;
+    override fun removeEntryCriterion(criterion: Criterion?) {
+        entryCriteria.remove(criterion)
+    }
+
+    override fun addCommonCriterion(criterion: Criterion) {
+        criterion.init()
+        commonCriteria.add(criterion)
+    }
+
+    override fun removeCommonCriterion(criterion: Criterion?) {
+        commonCriteria.remove(criterion)
+    }
+
+    override fun addExitCriterion(criterion: Criterion) {
+        criterion.init()
+        exitCriteria.add(criterion)
+    }
+
+    override fun removeExitCriterion(criterion: Criterion?) {
+        exitCriteria.remove(criterion)
+    }
+
+    override val isCommonCriteriaMet: Boolean
+        get() = testCriteria(commonCriteria)
+    override val isEntryCriteriaMet: Boolean
+        get() = testCriteria(entryCriteria)
+    override val isExitCriteriaMet: Boolean
+        get() = !exitCriteria.isEmpty() && testCriteria(exitCriteria)
+    override val isStopLossCriteriaMet: Boolean
+        get() = !stopLossCriteria.isEmpty() && testCriteria(stopLossCriteria)
+
+    override fun addStopLossCriterion(criterion: Criterion?) {
+        Preconditions.checkArgument(criterion != null, "criterion is null")
+        stopLossCriteria.add(criterion)
+    }
+
+    override val backTestResult: BackTestResult?
+        get() {
+            throw UnsupportedOperationException()
         }
-        log.debug("{} criterion was met", criterion.getClass().getName());
-      } catch (CriterionViolationException e) {
-        log.debug("{} criterion was NOT met", criterion.getClass().getName());
-        return false;
-      }
+
+    override fun addSymbol(symbol: String) {
+        symbols.add(symbol)
+        tradingContext.addContract(symbol)
     }
-    return true;
-  }
+
+    private fun testCriteria(criteria: List<Criterion?>): Boolean {
+        if (criteria.size == 0) {
+            return true
+        }
+        for (criterion in criteria) {
+            try {
+                if (!criterion!!.isMet) {
+                    Strategy.Companion.log.debug("{} criterion was NOT met", criterion.javaClass.name)
+                    return false
+                }
+                Strategy.Companion.log.debug("{} criterion was met", criterion.javaClass.name)
+            } catch (e: CriterionViolationException) {
+                Strategy.Companion.log.debug("{} criterion was NOT met", criterion!!.javaClass.name)
+                return false
+            }
+        }
+        return true
+    }
 }

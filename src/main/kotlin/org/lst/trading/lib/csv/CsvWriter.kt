@@ -1,68 +1,56 @@
-package org.lst.trading.lib.csv;
+package org.lst.trading.lib.csv
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.List;
-import java.util.stream.Stream;
-import rx.functions.Func1;
+import rx.functions.Func1
+import java.io.*
+import java.util.stream.Collectors
+import java.util.stream.Stream
 
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Stream.concat;
-import static java.util.stream.Stream.of;
-
-public class CsvWriter<T> {
-    public static <T> CsvWriter<T> create(List<Column<T>> columns) {
-        return new CsvWriter<>(columns);
+class CsvWriter<T>(var mColumns: List<Column<T>>) {
+    interface Column<T> {
+        val name: String?
+        val f: Func1<T, Any?>
     }
 
-    public static <T> Column<T> column(String name, Func1<T, Object> f) {
-        return new Column<T>() {
-            @Override public String getName() {
-                return name;
+    var mSeparator = ","
+    fun write(values: Stream<T>): Stream<String> {
+        return Stream.concat(
+            Stream.of(mColumns.stream().map { obj: Column<T> -> obj.name }
+                .collect(Collectors.joining(mSeparator))),
+            values.map { x: T ->
+                mColumns.stream().map { f: Column<T> ->
+                    val o = f.f.call(x)
+                    o?.toString() ?: ""
+                }.collect(Collectors.joining(mSeparator))
             }
-
-            @Override public Func1<T, Object> getF() {
-                return f;
-            }
-        };
+        )
     }
 
-    public interface Column<T> {
-        String getName();
-
-        Func1<T, Object> getF();
-    }
-
-    String mSeparator = ",";
-    List<Column<T>> mColumns;
-
-    public CsvWriter(List<Column<T>> columns) {
-        mColumns = columns;
-    }
-
-    public Stream<String> write(Stream<T> values) {
-        return concat(
-            of(mColumns.stream().map(Column::getName).collect(joining(mSeparator))),
-            values.map(x -> mColumns.stream().map(f -> {
-                Object o = f.getF().call(x);
-                return o == null ? "" : o.toString();
-            }).collect(joining(mSeparator)))
-        );
-    }
-
-    public void writeToStream(Stream<T> values, OutputStream outputStream) throws IOException {
-        Writer writer = new BufferedWriter(new OutputStreamWriter(outputStream));
-        write(values).forEach(x -> {
+    @Throws(IOException::class)
+    fun writeToStream(values: Stream<T>, outputStream: OutputStream?) {
+        val writer: Writer = BufferedWriter(OutputStreamWriter(outputStream))
+        write(values).forEach { x: String? ->
             try {
-                writer.write(x);
-                writer.write("\n");
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+                writer.write(x)
+                writer.write("\n")
+            } catch (e: IOException) {
+                throw RuntimeException(e)
             }
-        });
-        writer.flush();
+        }
+        writer.flush()
+    }
+
+    companion object {
+        fun <T> create(columns: List<Column<T>>): CsvWriter<T> {
+            return CsvWriter(columns)
+        }
+
+        fun <T> column(name: String?, f: Func1<T, Any?>): Column<T> {
+            return object : Column<T> {
+                override val name: String?
+                    get() = name
+                override val f: Func1<T, Any?>
+                    get() = f
+            }
+        }
     }
 }

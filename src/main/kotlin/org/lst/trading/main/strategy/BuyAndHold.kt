@@ -1,23 +1,21 @@
-package org.lst.trading.main.strategy;
+package org.lst.trading.main.strategy
 
-import java.util.HashMap;
-import java.util.Map;
-import org.lst.trading.lib.model.Order;
-import org.lst.trading.lib.model.TradingContext;
-import org.lst.trading.lib.model.TradingStrategy;
+import org.lst.trading.lib.model.Order
+import org.lst.trading.lib.model.TradingContext
+import org.lst.trading.lib.model.TradingStrategy
 
-public class BuyAndHold implements TradingStrategy {
-    Map<String, Order> mOrders;
-    TradingContext mContext;
-
-    @Override public void onStart(TradingContext context) {
-        mContext = context;
+class BuyAndHold : TradingStrategy {
+    var mOrders: MutableMap<String?, Order?>? = null
+    var mContext: TradingContext? = null
+    override fun onStart(context: TradingContext?) {
+        mContext = context
     }
 
-    @Override public void onTick() {
+    override fun onTick() {
         if (mOrders == null) {
-            mOrders = new HashMap<>();
-            mContext.getInstruments().stream().forEach(instrument -> mOrders.put(instrument, mContext.order(instrument, true, 1)));
+            mOrders = HashMap()
+            mContext.getInstruments().stream()
+                .forEach { instrument: String? -> mOrders[instrument] = mContext!!.order(instrument, true, 1) }
         }
     }
 }

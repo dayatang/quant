@@ -1,30 +1,19 @@
-package org.lst.trading.lib.model;
+package org.lst.trading.lib.model
 
-import java.time.Instant;
-import java.util.List;
-import java.util.stream.Stream;
-import org.lst.trading.lib.series.TimeSeries;
+import org.lst.trading.lib.series.TimeSeries
+import java.time.Instant
+import java.util.stream.Stream
 
-public interface TradingContext {
-    Instant getTime();
-
-    double getLastPrice(String instrument);
-
-    Stream<TimeSeries.Entry<Double>> getHistory(String instrument);
-
-    Order order(String instrument, boolean buy, int amount);
-
-    ClosedOrder close(Order order);
-
-    double getPl();
-
-    List<String> getInstruments();
-
-    double getAvailableFunds();
-
-    double getInitialFunds();
-
-    double getNetValue();
-
-    double getLeverage();
+interface TradingContext {
+    val time: Instant?
+    fun getLastPrice(instrument: String?): Double
+    fun getHistory(instrument: String?): Stream<TimeSeries.Entry<Double?>?>?
+    fun order(instrument: String?, buy: Boolean, amount: Int): Order?
+    fun close(order: Order?): ClosedOrder?
+    val pl: Double
+    val instruments: List<String?>
+    val availableFunds: Double
+    val initialFunds: Double
+    val netValue: Double
+    val leverage: Double
 }

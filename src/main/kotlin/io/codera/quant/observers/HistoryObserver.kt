@@ -1,11 +1,8 @@
-package io.codera.quant.observers;
+package io.codera.quant.observers
 
-import com.ib.controller.ApiController.IHistoricalDataHandler;
+import com.ib.controller.ApiController.IHistoricalDataHandler
 
 /**
  *
  */
-public interface HistoryObserver extends IHistoricalDataHandler {
-
-
-}
+interface HistoryObserver : IHistoricalDataHandler

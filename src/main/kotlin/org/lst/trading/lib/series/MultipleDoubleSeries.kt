@@ -1,81 +1,84 @@
-package org.lst.trading.lib.series;
+package org.lst.trading.lib.series
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
+import org.lst.trading.lib.series.TimeSeries.MergeFunction2
+import java.util.*
+import java.util.function.Function
+import java.util.stream.Collectors
 
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
+class MultipleDoubleSeries : TimeSeries<List<Double?>?> {
+    var mNames: MutableList<String?>
 
-public class MultipleDoubleSeries extends TimeSeries<List<Double>> {
-    List<String> mNames;
-
-    public MultipleDoubleSeries(Collection<String> names) {
-        mNames = new ArrayList<>(names);
+    constructor(names: Collection<String?>?) {
+        mNames = ArrayList(names)
     }
 
-    public MultipleDoubleSeries(List<DoubleSeries> series) {
-        mNames = new ArrayList<>();
-        for (int i = 0; i < series.size(); i++) {
+    constructor(series: List<DoubleSeries>) {
+        mNames = ArrayList()
+        for (i in series.indices) {
             if (i == 0) {
-                _init(series.get(i));
+                _init(series[i])
             } else {
-                addSeries(series.get(i));
+                addSeries(series[i])
             }
         }
     }
 
-    public MultipleDoubleSeries(DoubleSeries... series) {
-        mNames = new ArrayList<>();
-        for (int i = 0; i < series.length; i++) {
+    constructor(vararg series: DoubleSeries) {
+        mNames = ArrayList()
+        for (i in series.indices) {
             if (i == 0) {
-                _init(series[i]);
+                _init(series[i])
             } else {
-                addSeries(series[i]);
+                addSeries(series[i])
             }
         }
     }
 
-    void _init(DoubleSeries series) {
-        mData = new ArrayList<>();
-        for (Entry<Double> entry : series) {
-            LinkedList<Double> list = new LinkedList<>();
-            list.add(entry.mT);
-            add(new Entry<>(list, entry.mInstant));
+    fun _init(series: DoubleSeries) {
+        mData = ArrayList<Entry<List<Double>>>()
+        for (entry in series) {
+            val list = LinkedList<Double?>()
+            list.add(entry.mT)
+            add(Entry<List<Double>?>(list, entry.mInstant))
         }
-        mNames.add(series.mName);
+        mNames.add(series.mName)
     }
 
-    public void addSeries(DoubleSeries series) {
-        mData = merge(this, series, (l, t) -> {
-            l.add(t);
-            return l;
-        }).mData;
-        mNames.add(series.mName);
+    fun addSeries(series: DoubleSeries) {
+        mData = TimeSeries.Companion.merge<List<Double>, Double, List<Double>>(
+            this,
+            series,
+            MergeFunction2<List<Double>, Double, List<Double>> { l: MutableList<Double?>, t: Double? ->
+                l.add(t)
+                l
+            }).mData
+        mNames.add(series.mName)
     }
 
-    public DoubleSeries getColumn(String name) {
-        int index = getNames().indexOf(name);
-        List<Entry<Double>> entries = mData.stream().map(t -> new Entry<Double>(t.getItem().get(index), t.getInstant())).collect(toList());
-        return new DoubleSeries(entries, name);
+    fun getColumn(name: String): DoubleSeries {
+        val index = names.indexOf(name)
+        val entries = mData.stream().map<Entry<Double?>>(
+            Function<Entry<List<Double?>>, Entry<Double?>> { t: Entry<List<Double?>> ->
+                Entry(
+                    t.item[index], t.instant
+                )
+            }).collect(Collectors.toList())
+        return DoubleSeries(entries, name)
     }
 
-    public int indexOf(String name) {
-        return mNames.indexOf(name);
+    fun indexOf(name: String?): Int {
+        return mNames.indexOf(name)
     }
 
-    public List<String> getNames() {
-        return mNames;
-    }
+    val names: List<String?>
+        get() = mNames
 
-    @Override public String toString() {
-        return mData.isEmpty() ? "MultipleDoubleSeries{empty}" :
-            "MultipleDoubleSeries{" +
-                "mNames={" + mNames.stream().collect(joining(", ")) +
-                ", from=" + mData.get(0).getInstant() +
-                ", to=" + mData.get(mData.size() - 1).getInstant() +
-                ", size=" + mData.size() +
-                '}';
+    override fun toString(): String {
+        return if (mData.isEmpty()) "MultipleDoubleSeries{empty}" else "MultipleDoubleSeries{" +
+                "mNames={" + mNames.stream().collect(Collectors.joining(", ")) +
+                ", from=" + mData[0].instant +
+                ", to=" + mData[mData.size - 1].instant +
+                ", size=" + mData.size +
+                '}'
     }
 }

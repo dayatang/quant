@@ -1,54 +1,29 @@
-package org.lst.trading.lib.backtest;
+package org.lst.trading.lib.backtest
 
-import java.time.Instant;
-import org.lst.trading.lib.model.ClosedOrder;
+import org.lst.trading.lib.model.ClosedOrder
+import java.time.Instant
 
-public class SimpleClosedOrder implements ClosedOrder {
-    SimpleOrder mOrder;
-    double mClosePrice;
-    Instant mCloseInstant;
-    double mPl;
+open class SimpleClosedOrder(
+    var mOrder: SimpleOrder?,
+    override var closePrice: Double,
+    override var closeInstant: Instant
+) : ClosedOrder {
+    override var pl: Double
 
-    public SimpleClosedOrder(SimpleOrder order, double closePrice, Instant closeInstant) {
-        mOrder = order;
-        mClosePrice = closePrice;
-        mCloseInstant = closeInstant;
-        mPl = calculatePl(mClosePrice);
+    init {
+        pl = calculatePl(closePrice)
     }
 
-    @Override public int getId() {
-        return mOrder.getId();
-    }
-
-    @Override public double getClosePrice() {
-        return mClosePrice;
-    }
-
-    @Override public Instant getCloseInstant() {
-        return mCloseInstant;
-    }
-
-    @Override public double getPl() {
-        return mPl;
-    }
-
-    @Override public boolean isLong() {
-        return mOrder.isLong();
-    }
-
-    @Override public int getAmount() {
-        return mOrder.getAmount();
-    }
-
-    @Override public double getOpenPrice() {
-        return mOrder.getOpenPrice();
-    }
-
-    @Override public Instant getOpenInstant() {
-        return mOrder.getOpenInstant();
-    }
-
-    @Override public String getInstrument() {
-        return mOrder.getInstrument();
-    }
+    override val id: Int
+        get() = mOrder.getId()
+    override val isLong: Boolean
+        get() = mOrder!!.isLong
+    override val amount: Int
+        get() = mOrder.getAmount()
+    override val openPrice: Double
+        get() = mOrder.getOpenPrice()
+    override val openInstant: Instant?
+        get() = mOrder.getOpenInstant()
+    override val instrument: String?
+        get() = mOrder.getInstrument()
 }

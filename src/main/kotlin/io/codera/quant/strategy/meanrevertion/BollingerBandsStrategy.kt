@@ -1,61 +1,46 @@
-package io.codera.quant.strategy.meanrevertion;
+package io.codera.quant.strategy.meanrevertion
 
-import io.codera.quant.context.TradingContext;
-import io.codera.quant.exception.NoOrderAvailableException;
-import io.codera.quant.exception.PriceNotAvailableException;
-import io.codera.quant.strategy.AbstractStrategy;
+import io.codera.quant.context.TradingContext
+import io.codera.quant.exception.NoOrderAvailableException
+import io.codera.quant.exception.PriceNotAvailableException
+import io.codera.quant.strategy.*
 
 /**
- *  Bollinger bands strategy
+ * Bollinger bands strategy
  */
-public class BollingerBandsStrategy extends AbstractStrategy {
-
-  private final String firstSymbol;
-  private final String secondSymbol;
-  private final ZScore zScore;
-
-  public BollingerBandsStrategy(String firstSymbol, String secondSymbol,
-                                TradingContext tradingContext, ZScore zScore) {
-
-    super(tradingContext);
-    this.firstSymbol = firstSymbol;
-    this.secondSymbol = secondSymbol;
-    this.zScore = zScore;
-  }
-
-  @Override
-  public int getLotSize(String contract, boolean buy) {
-    return 0;
-  }
-
-  @Override
-  public void openPosition() throws PriceNotAvailableException {
-    double hedgeRatio = Math.abs(zScore.getHedgeRatio());
-
-    double baseAmount =
-        (tradingContext.getNetValue() * 0.5 * Math.min(4, tradingContext.getLeverage()))
-            / (tradingContext.getLastPrice(secondSymbol) + hedgeRatio * tradingContext.getLastPrice
-            (firstSymbol));
-
-    tradingContext.placeOrder(firstSymbol, zScore.getLastCalculatedZScore() < 0,
-        (int) (baseAmount * hedgeRatio) > 1 ? (int) (baseAmount * hedgeRatio) : 1);
-    log.debug("Order of {} in amount {}", firstSymbol, (int) (baseAmount * hedgeRatio));
-
-    tradingContext.placeOrder(secondSymbol, zScore.getLastCalculatedZScore() > 0, (int) baseAmount);
-    log.debug("Order of {} in amount {}", secondSymbol, (int) baseAmount);
-  }
-
-  @Override
-  public void closePosition() throws PriceNotAvailableException {
-    try {
-      tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(firstSymbol));
-    } catch (NoOrderAvailableException noOrderAvailable) {
-      log.error("No order available for {}", firstSymbol);
+class BollingerBandsStrategy(
+    private val firstSymbol: String, private val secondSymbol: String,
+    tradingContext: TradingContext, private val zScore: ZScore
+) : AbstractStrategy(tradingContext) {
+    override fun getLotSize(contract: String?, buy: Boolean): Int {
+        return 0
     }
-    try {
-      tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(secondSymbol));
-    } catch (NoOrderAvailableException noOrderAvailable) {
-      log.error("No order available for {}", secondSymbol);
+
+    @Throws(PriceNotAvailableException::class)
+    override fun openPosition() {
+        val hedgeRatio = Math.abs(zScore.hedgeRatio)
+        val baseAmount = (tradingContext.netValue * 0.5 * Math.min(4.0, tradingContext.leverage)
+                / (tradingContext.getLastPrice(secondSymbol) + hedgeRatio * tradingContext.getLastPrice(firstSymbol)))
+        tradingContext.placeOrder(
+            firstSymbol, zScore.lastCalculatedZScore < 0,
+            if ((baseAmount * hedgeRatio).toInt() > 1) (baseAmount * hedgeRatio).toInt() else 1
+        )
+        Strategy.Companion.log.debug("Order of {} in amount {}", firstSymbol, (baseAmount * hedgeRatio).toInt())
+        tradingContext.placeOrder(secondSymbol, zScore.lastCalculatedZScore > 0, baseAmount.toInt())
+        Strategy.Companion.log.debug("Order of {} in amount {}", secondSymbol, baseAmount.toInt())
     }
-  }
+
+    @Throws(PriceNotAvailableException::class)
+    override fun closePosition() {
+        try {
+            tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(firstSymbol))
+        } catch (noOrderAvailable: NoOrderAvailableException) {
+            Strategy.Companion.log.error("No order available for {}", firstSymbol)
+        }
+        try {
+            tradingContext.closeOrder(tradingContext.getLastOrderBySymbol(secondSymbol))
+        } catch (noOrderAvailable: NoOrderAvailableException) {
+            Strategy.Companion.log.error("No order available for {}", secondSymbol)
+        }
+    }
 }
