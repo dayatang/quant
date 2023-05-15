@@ -12,28 +12,28 @@ import java.util.*
 class BackTest(deposit: Double, priceSeries: MultipleDoubleSeries) {
     class Result(
         var pl: Double,
-        var plHistory: DoubleSeries?,
-        var marginHistory: DoubleSeries?,
-        var orders: List<ClosedOrder?>,
+        var plHistory: DoubleSeries,
+        var marginHistory: DoubleSeries,
+        var orders: List<ClosedOrder>,
         var initialFund: Double,
         var finalValue: Double,
         var commissions: Double
     ) {
 
-        val accountValueHistory: DoubleSeries?
-            get() = plHistory!!.plus(initialFund)
+        val accountValueHistory: DoubleSeries
+            get() = plHistory.plus(initialFund)
         val `return`: Double
             get() = finalValue / initialFund - 1
         val annualizedReturn: Double
             get() = `return` * 250 / daysCount
         val sharpe: Double
-            get() = Statistics.sharpe(Statistics.returns(accountValueHistory!!.toArray()))
+            get() = Statistics.sharpe(Statistics.returns(accountValueHistory.toArray()))
         val maxDrawdown: Double
-            get() = Statistics.drawdown(accountValueHistory!!.toArray())[0]
+            get() = Statistics.drawdown(accountValueHistory.toArray())[0]
         val maxDrawdownPercent: Double
-            get() = Statistics.drawdown(accountValueHistory!!.toArray())[1]
+            get() = Statistics.drawdown(accountValueHistory.toArray())[1]
         val daysCount: Int
-            get() = plHistory!!.size()
+            get() = plHistory.size()
     }
 
     var mPriceSeries: MultipleDoubleSeries
@@ -60,7 +60,7 @@ class BackTest(deposit: Double, priceSeries: MultipleDoubleSeries) {
         mStrategy = strategy
         mContext = strategy.tradingContext as BackTestTradingContext
         mContext.mInstruments = mPriceSeries.names
-        mContext!!.mHistory = MultipleDoubleSeries(mContext.mInstruments)
+        mContext.mHistory = MultipleDoubleSeries(mContext.mInstruments)
         mContext.mInitialFunds = mDeposit
         mContext.mLeverage = leverage
         mPriceIterator = mPriceSeries.iterator()
@@ -68,40 +68,40 @@ class BackTest(deposit: Double, priceSeries: MultipleDoubleSeries) {
     }
 
     fun nextStep(): Boolean {
-        if (!mPriceIterator!!.hasNext()) {
+        if (!mPriceIterator.hasNext()) {
             finish()
             return false
         }
-        val entry = mPriceIterator!!.next()
-        mContext!!.mPrices = entry.getItem()
+        val entry = mPriceIterator.next()
+        mContext.mPrices = entry.getItem()
         mContext.mInstant = entry.getInstant()
-        mContext!!.mPl.add(mContext.getPl(), entry.getInstant())
-        mContext!!.mFundsHistory.add(mContext!!.availableFunds, entry.getInstant())
-        if (mContext!!.availableFunds < 0) {
+        mContext.mPl.add(mContext.getPl(), entry.getInstant())
+        mContext.mFundsHistory.add(mContext.availableFunds, entry.getInstant())
+        if (mContext.availableFunds < 0) {
             finish()
             return false
         }
-        mStrategy!!.onTick()
-        mContext!!.mHistory!!.add(entry!!)
+        mStrategy.onTick()
+        mContext.mHistory.add(entry)
         return true
     }
 
     private fun finish() {
-        for (order in ArrayList(mContext!!.mOrders)) {
-            mContext!!.closeOrder(order)
+        for (order in ArrayList(mContext.mOrders)) {
+            mContext.closeOrder(order)
         }
 
         // TODO (replace below code with BackTest results implementation
 //        mStrategy.onEnd();
-        val orders = Collections.unmodifiableList<ClosedOrder?>(mContext!!.mClosedOrders)
+        val orders = Collections.unmodifiableList<ClosedOrder?>(mContext.mClosedOrders)
         result = Result(
-            mContext!!.mClosedPl,
-            mContext!!.mPl,
-            mContext!!.mFundsHistory,
+            mContext.mClosedPl,
+            mContext.mPl,
+            mContext.mFundsHistory,
             orders,
             mDeposit,
-            mDeposit + mContext!!.mClosedPl,
-            mContext!!.mCommissions
+            mDeposit + mContext.mClosedPl,
+            mContext.mCommissions
         )
     }
 }

@@ -15,7 +15,7 @@ import java.util.stream.Stream
  * contract prices, balances etc.
  */
 interface TradingContext {
-    val time: Instant?
+    val time: Instant
         /**
          * Returns the time of current tick
          * @return timestamp
@@ -29,7 +29,7 @@ interface TradingContext {
      * @return  last price
      */
     @Throws(PriceNotAvailableException::class)
-    fun getLastPrice(contract: String?): Double
+    fun getLastPrice(contract: String): Double
 
     /**
      * Returns history of prices.
@@ -37,7 +37,7 @@ interface TradingContext {
      * @param contract contract name
      * @return historical collection of prices
      */
-    fun getHistory(contract: String?): Stream<TimeSeries.Entry<Double?>?>? {
+    fun getHistory(contract: String): Stream<TimeSeries.Entry<Double>> {
         throw UnsupportedOperationException()
     }
 
@@ -48,7 +48,7 @@ interface TradingContext {
      * @param numberOfDays seconds of history to return before current time instant
      * @return historical collection of prices
      */
-    fun getHistory(contract: String, numberOfDays: Int): DoubleSeries? {
+    fun getHistory(contract: String, numberOfDays: Int): DoubleSeries {
         throw UnsupportedOperationException()
     }
 
@@ -59,7 +59,7 @@ interface TradingContext {
      * @param numberOfMinutes seconds of history to return before current time instant
      * @return historical collection of prices
      */
-    fun getHistoryInMinutes(contract: String, numberOfMinutes: Int): DoubleSeries? {
+    fun getHistoryInMinutes(contract: String, numberOfMinutes: Int): DoubleSeries {
         throw UnsupportedOperationException()
     }
 
@@ -110,7 +110,7 @@ interface TradingContext {
      * @param contractSymbol
      * @return
      */
-    fun getObserver(contractSymbol: String?): MarketDataObserver? {
+    fun getObserver(contractSymbol: String): MarketDataObserver {
         throw UnsupportedOperationException()
     }
 
@@ -123,7 +123,7 @@ interface TradingContext {
      * @return [Order] object
      */
     @Throws(PriceNotAvailableException::class)
-    fun placeOrder(contractSymbol: String?, buy: Boolean, amount: Int): Order
+    fun placeOrder(contractSymbol: String, buy: Boolean, amount: Int): Order
 
     /**
      * Close existing order
@@ -131,7 +131,7 @@ interface TradingContext {
      * @return [ClosedOrder] object
      */
     @Throws(PriceNotAvailableException::class)
-    fun closeOrder(order: Order?): ClosedOrder
+    fun closeOrder(order: Order): ClosedOrder
 
     /**
      * Returns last order of th symbol
@@ -141,7 +141,7 @@ interface TradingContext {
      * @throws NoOrderAvailableException if no orders available
      */
     @Throws(NoOrderAvailableException::class)
-    fun getLastOrderBySymbol(symbol: String?): Order?
+    fun getLastOrderBySymbol(symbol: String): Order
 
     /**
      * Returns symbol change if available
@@ -149,7 +149,7 @@ interface TradingContext {
      * @return symbol change since prior day close
      */
     @Throws(PriceNotAvailableException::class)
-    fun getChangeBySymbol(symbol: String?): Double {
+    fun getChangeBySymbol(symbol: String): Double {
         throw UnsupportedOperationException()
     }
 }

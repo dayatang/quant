@@ -8,9 +8,9 @@ interface Order {
     val id: Int
     val amount: Int
     val openPrice: Double
-    val openInstant: Instant?
-    val instrument: String?
-    val orderStatus: OrderStatus?
+    val openInstant: Instant
+    val instrument: String
+    val orderStatus: OrderStatus
         get() = OrderStatus.Inactive
     val isLong: Boolean
         get() = amount > 0

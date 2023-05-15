@@ -5,10 +5,10 @@ import java.util.*
 import java.util.function.Function
 import java.util.stream.Collectors
 
-class MultipleDoubleSeries : TimeSeries<List<Double?>?> {
-    var mNames: MutableList<String?>
+class MultipleDoubleSeries : TimeSeries<MutableList<Double>> {
+    var mNames: MutableList<String>
 
-    constructor(names: Collection<String?>?) {
+    constructor(names: Collection<String>) {
         mNames = ArrayList(names)
     }
 
@@ -35,34 +35,28 @@ class MultipleDoubleSeries : TimeSeries<List<Double?>?> {
     }
 
     fun _init(series: DoubleSeries) {
-        mData = ArrayList<Entry<List<Double>>>()
+        mData = ArrayList<Entry<MutableList<Double>>>()
         for (entry in series) {
-            val list = LinkedList<Double?>()
-            list.add(entry.mT)
-            add(Entry<List<Double>?>(list, entry.mInstant))
+            val list = LinkedList<Double>()
+            list.add(entry.item)
+            add(Entry(list, entry.instant))
         }
-        mNames.add(series.mName)
+        mNames.add(series.name)
     }
 
     fun addSeries(series: DoubleSeries) {
-        mData = TimeSeries.Companion.merge<List<Double>, Double, List<Double>>(
-            this,
-            series,
-            MergeFunction2<List<Double>, Double, List<Double>> { l: MutableList<Double?>, t: Double? ->
-                l.add(t)
-                l
-            }).mData
-        mNames.add(series.mName)
+        mData = merge(this, series) { l: MutableList<Double>, t: Double ->
+            l.add(t)
+            l
+        }.mData
+        mNames.add(series.name)
     }
 
     fun getColumn(name: String): DoubleSeries {
         val index = names.indexOf(name)
-        val entries = mData.stream().map<Entry<Double?>>(
-            Function<Entry<List<Double?>>, Entry<Double?>> { t: Entry<List<Double?>> ->
-                Entry(
-                    t.item[index], t.instant
-                )
-            }).collect(Collectors.toList())
+        val entries = mData.stream()
+            .map { Entry(it.item[index], it.instant) }
+            .toList()
         return DoubleSeries(entries, name)
     }
 

@@ -17,40 +17,43 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.*
 import java.util.stream.Stream
+import kotlin.collections.HashMap
+import kotlin.math.abs
+import kotlin.math.max
 
 class BackTestTradingContext : TradingContext {
-    override var time: Instant? = null
-    var mPrices: List<Double>? = null
-    override var contracts: List<String?>? = null
+    override var time: Instant = Instant.now()
+    var mPrices: List<Double> = emptyList()
+    override var contracts: List<String> = emptyList()
     var mPl = DoubleSeries("pl")
     var mFundsHistory = DoubleSeries("funds")
-    var mHistory: MultipleDoubleSeries? = null
+    lateinit var mHistory: MultipleDoubleSeries
     var initialFunds = 0.0
     var mCommissions = 0.0
-    private var orders: MutableMap<String?, Order>? = null
-    private val closePriceMap: MutableMap<String?, Double> = Maps.newConcurrentMap()
+    private var orders: MutableMap<String, Order> = Maps.newConcurrentMap()
+    private val closePriceMap: MutableMap<String, Double> = Maps.newConcurrentMap()
     var mOrderId = 1
-    var mOrders: MutableList<SimpleOrder?> = ArrayList()
+    var mOrders: MutableList<SimpleOrder> = ArrayList()
     var mClosedPl = 0.0
     var mClosedOrders: MutableList<SimpleClosedOrder> = ArrayList()
     override var leverage = 0.0
-    override fun getLastPrice(instrument: String?): Double {
+    override fun getLastPrice(instrument: String): Double {
         logger.info("Time: {}", time.toString())
         val date = Date.from(time)
         val hourMinutes = SimpleDateFormat("HH:mm")
         hourMinutes.timeZone = TimeZone.getTimeZone("UTC")
         val formattedHourMinutes = hourMinutes.format(date)
-        val price = mPrices!![contracts!!.indexOf(instrument)]
+        val price = mPrices[contracts.indexOf(instrument)]
         if (formattedHourMinutes == "13:00") {
             closePriceMap[instrument] = price
         }
         return price
     }
 
-    override fun getHistory(instrument: String?): Stream<TimeSeries.Entry<Double?>?>? {
-        val index = contracts!!.indexOf(instrument)
-        return mHistory!!.reversedStream()
-            .map { t: TimeSeries.Entry<List<Double?>?>? -> TimeSeries.Entry(t.getItem().get(index), t.getInstant()) }
+    override fun getHistory(instrument: String): Stream<TimeSeries.Entry<Double>> {
+        val index = contracts.indexOf(instrument)
+        return mHistory.reversedStream()
+            .map { t: TimeSeries.Entry<List<Double>> -> TimeSeries.Entry(t.item.get(index), t.instant) }
     }
 
     override fun addContract(contract: String) {
@@ -61,67 +64,66 @@ class BackTestTradingContext : TradingContext {
         throw UnsupportedOperationException()
     }
 
-    override fun placeOrder(instrument: String?, buy: Boolean, amount: Int): Order {
+    override fun placeOrder(instrument: String, buy: Boolean, amount: Int): Order {
 //    check(amount > 0);
         logger.info("OPEN {} in amount {}", instrument, (if (buy) 1 else -1) * amount)
         val price = getLastPrice(instrument)
-        val order = SimpleOrder(mOrderId++, instrument, time!!, price, amount * if (buy) 1 else -1)
+        val order = SimpleOrder(mOrderId++, instrument, time, price, amount * if (buy) 1 else -1)
         mOrders.add(order)
         if (orders == null) {
             orders = Maps.newConcurrentMap()
         }
-        orders!![instrument] = order
+        orders[instrument] = order
         mCommissions += calculateCommission(order)
         return order
     }
 
-    override fun closeOrder(order: Order?): ClosedOrder {
-        logger.info("CLOSE {} in amount {}", order.getInstrument(), -order.getAmount())
+    override fun closeOrder(order: Order): ClosedOrder {
+        logger.info("CLOSE {} in amount {}", order.instrument, -order.amount)
         val simpleOrder = order as SimpleOrder?
         mOrders.remove(simpleOrder)
-        val price = getLastPrice(order.getInstrument())
-        val closedOrder = SimpleClosedOrder(simpleOrder, price, time!!)
+        val price = getLastPrice(order.instrument)
+        val closedOrder = SimpleClosedOrder(simpleOrder, price, time)
         mClosedOrders.add(closedOrder)
         mClosedPl += closedOrder.pl
         mCommissions += calculateCommission(order)
         if (orders != null) {
-            orders!!.remove(order.getInstrument())
+            orders.remove(order.instrument)
         }
         return closedOrder
     }
 
     @Throws(NoOrderAvailableException::class)
-    override fun getLastOrderBySymbol(symbol: String?): Order? {
-        Preconditions.checkArgument(symbol != null, "symbol is null")
-        if (orders == null || !orders!!.containsKey(symbol)) {
+    override fun getLastOrderBySymbol(symbol: String): Order {
+        if (!orders.containsKey(symbol)) {
             throw NoOrderAvailableException()
         }
-        return orders!![symbol]
+        return orders[symbol]!!
     }
 
     val pl: Double
         get() = mClosedPl + mOrders.stream()
-            .mapToDouble { t: SimpleOrder? -> t!!.calculatePl(getLastPrice(t.instrument)) }.sum() - mCommissions
+            .mapToDouble { t: SimpleOrder -> t.calculatePl(getLastPrice(t.instrument)) }.sum() - mCommissions
     override val availableFunds: Double
         get() = netValue - mOrders.stream()
-            .mapToDouble { t: SimpleOrder? -> Math.abs(t.getAmount()) * t.getOpenPrice() / leverage }
+            .mapToDouble { t: SimpleOrder -> Math.abs(t.amount) * t.openPrice / leverage }
             .sum()
     override val netValue: Double
         get() = initialFunds + pl
 
-    fun calculateCommission(order: Order?): Double {
-        if (order.getInstrument().contains("/")) {
-            return Math.abs(order.getAmount()) * order.getOpenPrice() * 0.00002
-        } else if (order.getInstrument().contains("=F")) {
-            return Math.abs(order.getAmount()) * 2.04
+    fun calculateCommission(order: Order): Double {
+        if (order.instrument.contains("/")) {
+            return abs(order.amount) * order.openPrice * 0.00002
+        } else if (order.instrument.contains("=F")) {
+            return abs(order.amount) * 2.04
         }
-        val commissions = Math.max(1.0, Math.abs(order.getAmount()) * 0.005)
+        val commissions = max(1.0, abs(order.amount) * 0.005)
         logger.debug("Commissions: {}", commissions)
         return commissions
     }
 
     @Throws(PriceNotAvailableException::class)
-    override fun getChangeBySymbol(symbol: String?): Double {
+    override fun getChangeBySymbol(symbol: String): Double {
         if (!closePriceMap.containsKey(symbol)) {
             throw PriceNotAvailableException()
         }

@@ -1,15 +1,12 @@
 package org.lst.trading.lib.series
 
-import org.lst.trading.lib.series.TimeSeries.MergeFunction
 import java.util.function.Function
 import java.util.function.ToDoubleFunction
 
-class DoubleSeries : TimeSeries<Double?> {
+class DoubleSeries : TimeSeries<Double> {
     var name: String
 
-    internal constructor(data: MutableList<Entry<Double?>>?, name: String) : super(
-        data!!
-    ) {
+    internal constructor(data: MutableList<Entry<Double>>, name: String) : super(data) {
         this.name = name
     }
 
@@ -17,24 +14,24 @@ class DoubleSeries : TimeSeries<Double?> {
         this.name = name
     }
 
-    fun merge(other: DoubleSeries, f: MergeFunction<Double, Double?>): DoubleSeries {
-        return DoubleSeries(TimeSeries.Companion.merge<Double, Double?>(this, other, f).mData, name)
+    fun merge(other: DoubleSeries, f: (Double, Double) -> Double): DoubleSeries {
+        return DoubleSeries(merge(this, other, f).mData, name)
     }
 
-    fun mapToDouble(f: Function<Double?, Double?>?): DoubleSeries {
+    fun mapToDouble(f: (Double) -> Double): DoubleSeries {
         return DoubleSeries(map(f).mData, name)
     }
 
     operator fun plus(other: DoubleSeries): DoubleSeries {
-        return merge(other, MergeFunction { x: Double, y: Double -> x + y })
+        return merge(other, Double::plus)
     }
 
     operator fun plus(other: Double): DoubleSeries {
-        return mapToDouble { x: Double? -> x!! + other }
+        return mapToDouble { it + other }
     }
 
     fun mul(other: DoubleSeries): DoubleSeries {
-        return merge(other, MergeFunction { x: Double, y: Double -> x * y })
+        return merge(other, Double::times)
     }
 
     fun mul(factor: Double): DoubleSeries {
@@ -42,7 +39,7 @@ class DoubleSeries : TimeSeries<Double?> {
     }
 
     operator fun div(other: DoubleSeries): DoubleSeries {
-        return merge(other, MergeFunction { x: Double, y: Double -> x / y })
+        return merge(other, Double::div)
     }
 
     fun returns(): DoubleSeries {
@@ -50,7 +47,7 @@ class DoubleSeries : TimeSeries<Double?> {
     }
 
     val last: Double
-        get() = data[size() - 1].item
+        get() = data.last().item
 
     fun tail(n: Int): DoubleSeries {
         return DoubleSeries(data.subList(size() - n, size()), name)
@@ -61,7 +58,7 @@ class DoubleSeries : TimeSeries<Double?> {
     }
 
     fun toArray(): DoubleArray {
-        return stream().mapToDouble(ToDoubleFunction { obj: Entry<Double?>? -> obj.getItem() }).toArray()
+        return stream().mapToDouble(Entry<Double>::item).toArray()
     }
 
     override fun toAscending(): DoubleSeries {
@@ -72,9 +69,7 @@ class DoubleSeries : TimeSeries<Double?> {
         return DoubleSeries(super.toDescending().mData, name)
     }
 
-    override fun lag(k: Int): DoubleSeries {
-        return DoubleSeries(super.lag(k).mData, name)
-    }
+    override fun lag(k: Int): DoubleSeries = DoubleSeries(super.lag(k).mData, name)
 
     override fun toString(): String {
         return if (mData.isEmpty()) "DoubleSeries{empty}" else "DoubleSeries{" +

@@ -53,7 +53,7 @@
           </execution>
         </executions>
         <configuration>
-          <jvmTarget>1.8</jvmTarget>
+          <jvmTarget>17</jvmTarget>
         </configuration>
       </plugin>
       <plugin>
@@ -76,11 +76,18 @@
           </execution>
         </executions>
         <configuration>
-          <source>1.8</source>
-          <target>1.8</target>
+          <source>16</source>
+          <target>16</target>
         </configuration>
       </plugin>
     </plugins>
+    <sourceDirectory>src/main/kotlin</sourceDirectory>
+    <testSourceDirectory>src/test/kotlin</testSourceDirectory>
+    <testResources>
+      <testResource>
+        <directory>${project.basedir}/src/test/resources</directory>
+      </testResource>
+    </testResources>
   </build>
   <packaging>jar</packaging>
 
@@ -194,5 +201,4 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-
 </project>

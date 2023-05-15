@@ -3,26 +3,25 @@ package org.lst.trading.lib.series
 import org.lst.trading.lib.util.Util
 import java.time.Instant
 import java.util.*
-import java.util.function.Function
 import java.util.stream.IntStream
 import java.util.stream.Stream
 
-open class TimeSeries<T> : Iterable<TimeSeries.Entry<T>?> {
-    class Entry<T>(t: T, instant: Instant?) {
-        var item: T?
-        var instant: Instant?
+open class TimeSeries<T> : Iterable<TimeSeries.Entry<T>> {
+    class Entry<T>(t: T, instant: Instant) {
+        var item: T
+        var instant: Instant
 
         init {
             item = t
             this.instant = instant
         }
 
-        override fun equals(o: Any?): Boolean {
-            if (this === o) return true
-            if (o == null || javaClass != o.javaClass) return false
-            val entry = o as Entry<*>
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other == null || javaClass != other.javaClass) return false
+            val entry = other as Entry<*>
             if (instant != entry.instant) return false
-            return if (if (item != null) item != entry.item else entry.item != null) false else true
+            return !if (item != null) item != entry.item else entry.item != null
         }
 
         override fun hashCode(): Int {
@@ -39,13 +38,13 @@ open class TimeSeries<T> : Iterable<TimeSeries.Entry<T>?> {
         }
     }
 
-    var mData: MutableList<Entry<T?>>
+    var mData: MutableList<Entry<T>>
 
     constructor() {
         mData = ArrayList()
     }
 
-    protected constructor(data: MutableList<Entry<T?>>) {
+    protected constructor(data: MutableList<Entry<T>>) {
         mData = data
     }
 
@@ -56,31 +55,31 @@ open class TimeSeries<T> : Iterable<TimeSeries.Entry<T>?> {
     val isEmpty: Boolean
         get() = mData.isEmpty()
 
-    fun add(tEntry: Entry<T?>): Boolean {
+    fun add(tEntry: Entry<T>): Boolean {
         return mData.add(tEntry)
     }
 
-    fun add(item: T, instant: Instant?) {
+    fun add(item: T, instant: Instant) {
         add(Entry(item, instant))
     }
 
-    fun stream(): Stream<Entry<T?>> {
+    fun stream(): Stream<Entry<T>> {
         return mData.stream()
     }
 
-    fun reversedStream(): Stream<Entry<T?>> {
+    fun reversedStream(): Stream<Entry<T>> {
         Util.check(mData !is LinkedList<*>)
         return IntStream.range(1, mData.size + 1).mapToObj { i: Int -> mData[mData.size - i] }
     }
 
-    override fun iterator(): Iterator<Entry<T>?> {
+    override fun iterator(): Iterator<Entry<T>> {
         return mData.iterator()
     }
 
-    val data: List<Entry<T?>>
+    val data: MutableList<Entry<T>>
         get() = Collections.unmodifiableList(mData)
 
-    operator fun get(index: Int): Entry<T?> {
+    operator fun get(index: Int): Entry<T> {
         return mData[index]
     }
 
@@ -92,48 +91,39 @@ open class TimeSeries<T> : Iterable<TimeSeries.Entry<T>?> {
         fun merge(t1: T1, t2: T2): F
     }
 
-    fun <F> map(f: Function<T?, F>): TimeSeries<F> {
+    fun <F> map(f: (T) -> F): TimeSeries<F> {
         val newEntries: MutableList<Entry<F>> = ArrayList(size())
         for (entry in mData) {
-            newEntries.add(Entry(f.apply(entry.item), entry.instant))
+            newEntries.add(Entry(f(entry.item), entry.instant))
         }
         return TimeSeries(newEntries)
     }
 
     val isAscending: Boolean
-        get() = size() <= 1 || get(0).instant!!.isBefore(get(1).instant)
+        get() = size() <= 1 || get(0).instant.isBefore(get(1).instant)
 
-    open fun toAscending(): TimeSeries<T?> {
+    open fun toAscending(): TimeSeries<T> {
         return if (!isAscending) {
             reverse()
         } else this
     }
 
-    open fun toDescending(): TimeSeries<T?> {
+    open fun toDescending(): TimeSeries<T> {
         return if (isAscending) {
             reverse()
         } else this
     }
 
-    fun reverse(): TimeSeries<T?> {
+    fun reverse(): TimeSeries<T> {
         val entries = ArrayList(mData)
-        Collections.reverse(entries)
+        entries.reverse()
         return TimeSeries(entries)
     }
 
-    open fun lag(k: Int): TimeSeries<T?> {
-        return lag(k, false, null)
-    }
-
-    fun lag(k: Int, addEmpty: Boolean, emptyVal: T?): TimeSeries<T?> {
+    open fun lag(k: Int): TimeSeries<T> {
         Util.check(k > 0)
         Util.check(mData.size >= k)
-        val entries = ArrayList<Entry<T?>>(if (addEmpty) mData.size else mData.size - k)
-        if (addEmpty) {
-            for (i in 0 until k) {
-                entries.add(Entry(emptyVal, mData[i].instant))
-            }
-        }
+        val entries = ArrayList<Entry<T>>(mData.size - k)
         for (i in k until size()) {
             entries.add(Entry(mData[i - k].item, mData[i].instant))
         }
@@ -149,7 +139,11 @@ open class TimeSeries<T> : Iterable<TimeSeries.Entry<T>?> {
     }
 
     companion object {
-        fun <T1, T2, F> merge(t1: TimeSeries<T1>, t2: TimeSeries<T2>, f: MergeFunction2<T1, T2, F>): TimeSeries<F> {
+        fun <T1, T2, F> merge(
+            t1: TimeSeries<T1>,
+            t2: TimeSeries<T2>,
+            f: (T1, T2) -> F
+        ): TimeSeries<F> {
             Util.check(t1.isAscending)
             Util.check(t2.isAscending)
             val i1: Iterator<Entry<T1>> = t1.iterator()
@@ -159,34 +153,34 @@ open class TimeSeries<T> : Iterable<TimeSeries.Entry<T>?> {
                 var n1 = i1.next()
                 var n2 = i2.next()
                 while (n2.instant != n1.instant) {
-                    if (n1.instant!!.isBefore(n2.instant)) {
+                    if (n1.instant.isBefore(n2.instant)) {
                         if (!i1.hasNext()) {
                             break
                         }
                         while (i1.hasNext()) {
                             n1 = i1.next()
-                            if (!n1.instant!!.isBefore(n2.instant)) {
+                            if (!n1.instant.isBefore(n2.instant)) {
                                 break
                             }
                         }
-                    } else if (n2.instant!!.isBefore(n1.instant)) {
+                    } else if (n2.instant.isBefore(n1.instant)) {
                         while (i2.hasNext()) {
                             n2 = i2.next()
-                            if (!n2.instant!!.isBefore(n1.instant)) {
+                            if (!n2.instant.isBefore(n1.instant)) {
                                 break
                             }
                         }
                     }
                 }
                 if (n2.instant == n1.instant) {
-                    newEntries.add(Entry(f.merge(n1.item, n2.item), n1.instant))
+                    newEntries.add(Entry(f(n1.item, n2.item), n1.instant))
                 }
             }
             return TimeSeries(newEntries)
         }
 
-        fun <T, F> merge(t1: TimeSeries<T>, t2: TimeSeries<T>, f: MergeFunction<T, F>): TimeSeries<F> {
-            return merge<T, T, F>(t1, t2, MergeFunction2<T, T, F> { t1: T1, t2: T2 -> f.merge(t1, t2) })
+        fun <T, F> merge(t1: TimeSeries<T>, t2: TimeSeries<T>, f: (T, T) -> F): TimeSeries<F> {
+            return merge(t1, t2) { a, b -> f(a, b) }
         }
     }
 }

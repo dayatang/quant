@@ -17,6 +17,7 @@ import io.codera.quant.util.MathUtil
 import org.lst.trading.lib.backtest.BackTest
 import org.lst.trading.lib.backtest.BackTestTradingContext
 import java.util.*
+import kotlin.math.abs
 
 /**
  * Back test for [io.codera.quant.strategy.meanrevertion.BollingerBandsStrategy]
@@ -70,7 +71,7 @@ object BollingerBandsBackTest {
             orders.append(
                 String.format(
                     Locale.US, "%d,%d,%s,%s,%s,%s,%f,%f,%f\n", order.id,
-                    Math.abs(order.amount), if (order.isLong) "Buy" else "Sell", order.instrument,
+                    abs(order.amount), if (order.isLong) "Buy" else "Sell", order.instrument,
                     order.openInstant,
                     order.closeInstant,
                     order.openPrice,
