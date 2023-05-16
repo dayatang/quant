@@ -26,9 +26,7 @@ class IbMarketDataObserver(override val symbol: String) : MarketDataObserver {
         priceSubject.onNext(Price(tickType, realPrice))
     }
 
-    override fun priceObservable(): Observable<Price> {
-        return priceSubject.asObservable()
-    }
+    override fun priceObservable(): Observable<Price> = priceSubject.asObservable()
 
     override fun tickSize(tickType: TickType, size: Decimal) {
         TODO("Not yet implemented")

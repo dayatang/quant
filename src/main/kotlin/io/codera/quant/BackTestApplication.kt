@@ -30,7 +30,7 @@ object BackTestApplication {
     @Throws(IOException::class, SQLException::class)
     @JvmStatic
     fun main(args: Array<String>) {
-        val controller = ApiController(IbConnectionHandler(), { valueOf: String? -> }) { valueOf: String? -> }
+        val controller = ApiController(IbConnectionHandler(), { _: String? -> }) { _: String? -> }
         controller.connect(DEFAULT_HOST, DEFAULT_IB_PORT, DEFAULT_CLIENT_ID, null)
         val contracts: List<String> = ImmutableList.of("SPY", "VOO")
         val priceSeries = Helper.getHistoryForSymbols(controller, DAYS_OF_HISTORY, contracts)
