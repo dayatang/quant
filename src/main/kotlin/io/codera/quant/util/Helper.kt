@@ -24,6 +24,7 @@ import java.nio.file.Paths
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
+import kotlin.math.sqrt
 
 /**
  *
@@ -99,22 +100,20 @@ object Helper {
         return MultipleDoubleSeries(doubleSeries)
     }
 
-    fun getMean(data: DoubleArray): Double {
-        var sum = 0.0
-        for (a in data) sum += a
-        return sum / data.size
-    }
+    fun getMean(data: DoubleArray): Double =
+        if (data.isEmpty()) 0.0 else data.reduce (Double::plus) / data.size
 
     private fun getVariance(data: DoubleArray): Double {
+        if (data.isEmpty()) return 0.0
         val mean = getMean(data)
-        var temp = 0.0
-        for (a in data) temp += (a - mean) * (a - mean)
+        val temp = data.map { it - mean }.map { it * it }.reduce(Double::plus)
         return temp / data.size
     }
 
-    fun getStdDev(data: DoubleArray): Double {
-        return Math.sqrt(getVariance(data))
-    }
+    fun getStdDev(data: DoubleArray): Double = sqrt(getVariance(data))
+
+    fun getCV(data: DoubleArray): Double =
+        if (data.isEmpty()) 0.0 else getStdDev(data) / getMean(data)
 
     internal class Response {
         var base: String? = null
