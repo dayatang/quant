@@ -18,5 +18,5 @@ interface StrategyRunner {
      * @param strategy strategy to stop
      * @param symbols symbols list
      */
-    fun stop(strategy: Strategy?, symbols: List<String?>?)
+    fun stop(strategy: Strategy, symbols: List<String>)
 }

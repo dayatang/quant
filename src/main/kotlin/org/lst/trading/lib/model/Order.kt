@@ -1,7 +1,7 @@
 package org.lst.trading.lib.model
 
 import com.ib.client.OrderStatus
-import io.codera.quant.config.ContractBuilder.Companion.getFutureMultiplier
+import io.codera.quant.config.ContractBuilder.getFutureMultiplier
 import java.time.Instant
 
 interface Order {
@@ -20,9 +20,7 @@ interface Order {
         get() = if (isLong) 1 else -1
 
     fun calculatePl(currentPrice: Double): Double {
-        return if (instrument.contains("=F")) {
-            amount * (currentPrice - openPrice) *
-                    getFutureMultiplier(instrument)!!
-        } else amount * (currentPrice - openPrice)
+        val base = amount * (currentPrice - openPrice)
+        return if (instrument.contains("=F")) base * getFutureMultiplier(instrument) else base
     }
 }

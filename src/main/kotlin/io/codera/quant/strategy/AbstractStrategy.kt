@@ -9,11 +9,11 @@ import io.codera.quant.exception.CriterionViolationException
  * Abstract strategy class.
  */
 abstract class AbstractStrategy(override val tradingContext: TradingContext) : Strategy {
-    protected var commonCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
-    protected var entryCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
-    protected var exitCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
-    protected var stopLossCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
-    protected var symbols: MutableList<String> = Lists.newLinkedList()
+    private var commonCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
+    private var entryCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
+    private var exitCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
+    private var stopLossCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
+    private var symbols: MutableList<String> = Lists.newLinkedList()
 
     override fun addEntryCriterion(criterion: Criterion) {
         criterion.init()
@@ -73,12 +73,12 @@ abstract class AbstractStrategy(override val tradingContext: TradingContext) : S
         for (criterion in criteria) {
             try {
                 if (!criterion!!.isMet) {
-                    Strategy.Companion.log.debug("{} criterion was NOT met", criterion.javaClass.name)
+                    Strategy.log.debug("{} criterion was NOT met", criterion.javaClass.name)
                     return false
                 }
-                Strategy.Companion.log.debug("{} criterion was met", criterion.javaClass.name)
+                Strategy.log.debug("{} criterion was met", criterion.javaClass.name)
             } catch (e: CriterionViolationException) {
-                Strategy.Companion.log.debug("{} criterion was NOT met", criterion!!.javaClass.name)
+                Strategy.log.debug("{} criterion was NOT met", criterion!!.javaClass.name)
                 return false
             }
         }

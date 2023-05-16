@@ -20,10 +20,8 @@ class IbPerMinuteStrategyRunner : StrategyRunner {
         )
     }
 
-    override fun stop(strategy: Strategy?, symbols: List<String?>?) {}
-    private inner class TriggerTick internal constructor(private val strategy: Strategy) : TimerTask() {
-        override fun run() {
-            strategy.onTick()
-        }
+    override fun stop(strategy: Strategy, symbols: List<String>) {}
+    private inner class TriggerTick(private val strategy: Strategy) : TimerTask() {
+        override fun run() = strategy.onTick()
     }
 }

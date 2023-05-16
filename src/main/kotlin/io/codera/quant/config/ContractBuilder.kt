@@ -9,7 +9,35 @@ import org.slf4j.LoggerFactory
 /**
  * Builds the contract
  */
-class ContractBuilder {
+object ContractBuilder {
+    private val log = LoggerFactory.getLogger(ContractBuilder::class.java)
+    private val futuresMap: Map<String, Int> = ImmutableMap.of(
+        "ES=F", 50, "YM=F", 5,
+        "TF=F", 50
+    )
+
+    /**
+     * If it's a forex symbol, then for some strategies it is necessary to flip the price to
+     * understand the price based on USD (e.g. how many dollars is needed to buy 1 unit of currency
+     * in traded pair)
+     *
+     * @param symbol symbol name
+     * @return adjusted price, basically 1/<pair price>
+    </pair> */
+    fun getSymbolPrice(symbol: String, price: Double): Double {
+        if (symbol.contains("/")) {
+            val fxSymbols = symbol.split("/".toRegex()).dropLastWhile(String::isEmpty).toTypedArray()
+            if (fxSymbols[0] == "USD") return 1 / price
+        }
+        return price
+    }
+
+    @JvmStatic
+    fun getFutureMultiplier(futureSymbol: String): Int {
+        // TODO (Dsinyakov) : refactor to throw exception instead of returning null
+        return futuresMap[futureSymbol]?: 1
+    }
+
     fun build(symbolName: String): Contract {
         val contract = Contract()
         if (symbolName.contains("/")) {
@@ -42,38 +70,5 @@ class ContractBuilder {
         contract.secType(Types.SecType.STK)
         contract.currency("USD")
         return contract
-    }
-
-    companion object {
-        private val log = LoggerFactory.getLogger(ContractBuilder::class.java)
-        private val futuresMap: Map<String?, Int> = ImmutableMap.of(
-            "ES=F", 50, "YM=F", 5,
-            "TF=F", 50
-        )
-
-        /**
-         * If it's a forex symbol, then for some strategies it is necessary to flip the price to
-         * understand the price based on USD (e.g. how many dollars is needed to buy 1 unit of currency
-         * in traded pair)
-         *
-         * @param symbol symbol name
-         * @return adjusted price, basically 1/<pair price>
-        </pair> */
-        fun getSymbolPrice(symbol: String, price: Double): Double {
-            if (symbol.contains("/")) {
-                val fxSymbols = symbol.split("/".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                if (fxSymbols[0] == "USD") {
-                    return 1 / price
-                }
-            }
-            return price
-        }
-
-        @JvmStatic
-        fun getFutureMultiplier(futureSymbol: String?): Int? {
-            Preconditions.checkArgument(futureSymbol != null, "symbol is null")
-            // TODO (Dsinyakov) : refactor to throw exception instead of returning null
-            return futuresMap[futureSymbol]
-        }
     }
 }

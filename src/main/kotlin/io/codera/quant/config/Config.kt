@@ -24,14 +24,18 @@ import java.util.*
 
 /**
  */
-class Config(private val host: String, private val port: Int, private val symbolList: String) : AbstractModule() {
+class Config(
+    private val host: String,
+    private val port: Int,
+    private val symbolList: String
+) : AbstractModule() {
     override fun configure() {
         bind(StrategyRunner::class.java).to(IbPerMinuteStrategyRunner::class.java)
     }
 
     @Provides
     fun apiController(): ApiController {
-        val controller = ApiController(IbConnectionHandler(), { valueOf: String? -> }) { valueOf: String? -> }
+        val controller = ApiController(IbConnectionHandler(), { _: String? -> }) { _: String? -> }
         controller.connect(host, port, 0, null)
         return controller
     }
@@ -41,7 +45,6 @@ class Config(private val host: String, private val port: Int, private val symbol
     fun tradingContext(controller: ApiController): TradingContext {
         return IbTradingContext(
             controller,
-            ContractBuilder(),
             OrderType.MKT,  //        DriverManager.getConnection("jdbc:mysql://localhost/fx", "root", "admin"),
             2
         )

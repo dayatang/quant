@@ -2,38 +2,32 @@ package org.lst.trading.lib.series
 
 import java.util.*
 import java.util.stream.Collectors
+import kotlin.collections.ArrayList
 
 class MultipleDoubleSeries : TimeSeries<MutableList<Double>> {
-    var mNames: MutableList<String>
+
+    private var mNames: MutableList<String> = ArrayList()
+
+    val names: List<String>
+        get() = mNames
 
     constructor(names: Collection<String>) {
         mNames = ArrayList(names)
     }
 
     constructor(series: List<DoubleSeries>) {
-        mNames = ArrayList()
         for (i in series.indices) {
             if (i == 0) {
-                _init(series[i])
+                init(series[i])
             } else {
                 addSeries(series[i])
             }
         }
     }
 
-    constructor(vararg series: DoubleSeries) {
-        mNames = ArrayList()
-        for (i in series.indices) {
-            if (i == 0) {
-                _init(series[i])
-            } else {
-                addSeries(series[i])
-            }
-        }
-    }
+    constructor(vararg series: DoubleSeries): this(listOf(*series))
 
-    fun _init(series: DoubleSeries) {
-        mData = ArrayList<Entry<MutableList<Double>>>()
+    private fun init(series: DoubleSeries) {
         for (entry in series) {
             val list = LinkedList<Double>()
             list.add(entry.item)
@@ -42,7 +36,7 @@ class MultipleDoubleSeries : TimeSeries<MutableList<Double>> {
         mNames.add(series.name)
     }
 
-    fun addSeries(series: DoubleSeries) {
+    private fun addSeries(series: DoubleSeries) {
         mData = merge(this, series) { l: MutableList<Double>, t: Double ->
             l.add(t)
             l
@@ -61,9 +55,6 @@ class MultipleDoubleSeries : TimeSeries<MutableList<Double>> {
     fun indexOf(name: String): Int {
         return mNames.indexOf(name)
     }
-
-    val names: List<String>
-        get() = mNames
 
     override fun toString(): String {
         return if (mData.isEmpty()) "MultipleDoubleSeries{empty}" else "MultipleDoubleSeries{" +

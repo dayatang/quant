@@ -15,67 +15,12 @@ import java.util.stream.Stream
  * contract prices, balances etc.
  */
 interface TradingContext {
+    /**
+     * Returns the time of current tick
+     * @return timestamp
+     */
     val time: Instant
-        /**
-         * Returns the time of current tick
-         * @return timestamp
-         */
         get() = Instant.now()
-
-    /**
-     * Returns last price of the contract
-     *
-     * @param contract contract name
-     * @return  last price
-     */
-    @Throws(PriceNotAvailableException::class)
-    fun getLastPrice(contract: String): Double
-
-    /**
-     * Returns history of prices.
-     *
-     * @param contract contract name
-     * @return historical collection of prices
-     */
-    fun getHistory(contract: String): Stream<TimeSeries.Entry<Double>> {
-        throw UnsupportedOperationException()
-    }
-
-    /**
-     * Returns history of prices.
-     *
-     * @param contract contract name
-     * @param numberOfDays seconds of history to return before current time instant
-     * @return historical collection of prices
-     */
-    fun getHistory(contract: String, numberOfDays: Int): DoubleSeries {
-        throw UnsupportedOperationException()
-    }
-
-    /**
-     * Returns history of prices.
-     *
-     * @param contract contract name
-     * @param numberOfMinutes seconds of history to return before current time instant
-     * @return historical collection of prices
-     */
-    fun getHistoryInMinutes(contract: String, numberOfMinutes: Int): DoubleSeries {
-        throw UnsupportedOperationException()
-    }
-
-    /**
-     * Adds contract into trading contract.
-     *
-     * @param contract contract name
-     */
-    fun addContract(contract: String)
-
-    /**
-     * Removes contract from context.
-     *
-     * @param contract contract name
-     */
-    fun removeContract(contract: String)
 
     /**
      * returns a collection of current contracts in context.
@@ -102,28 +47,83 @@ interface TradingContext {
      *
      * @return leverage
      */
-    val leverage: Double
+    val leverage: Number
+
+    /**
+     * Returns last price of the contract
+     *
+     * @param symbol contract name
+     * @return  last price
+     */
+    @Throws(PriceNotAvailableException::class)
+    fun getLastPrice(symbol: String): Double
+
+    /**
+     * Returns history of prices.
+     *
+     * @param symbol contract name
+     * @return historical collection of prices
+     */
+    fun getHistory(symbol: String): Stream<TimeSeries.Entry<Double>> {
+        throw UnsupportedOperationException()
+    }
+
+    /**
+     * Returns history of prices.
+     *
+     * @param symbol contract name
+     * @param numberOfDays seconds of history to return before current time instant
+     * @return historical collection of prices
+     */
+    fun getHistory(symbol: String, numberOfDays: Int): DoubleSeries {
+        throw UnsupportedOperationException()
+    }
+
+    /**
+     * Returns history of prices.
+     *
+     * @param symbol contract name
+     * @param numberOfMinutes seconds of history to return before current time instant
+     * @return historical collection of prices
+     */
+    fun getHistoryInMinutes(symbol: String, numberOfMinutes: Int): DoubleSeries {
+        throw UnsupportedOperationException()
+    }
+
+    /**
+     * Adds contract into trading contract.
+     *
+     * @param symbol contract name
+     */
+    fun addContract(symbol: String)
+
+    /**
+     * Removes contract from context.
+     *
+     * @param symbol contract name
+     */
+    fun removeContract(symbol: String)
 
     /**
      * Returns contract observer
      *
-     * @param contractSymbol
+     * @param symbol
      * @return
      */
-    fun getObserver(contractSymbol: String): MarketDataObserver {
+    fun getObserver(symbol: String): MarketDataObserver {
         throw UnsupportedOperationException()
     }
 
     /**
      * Place a contract order
      *
-     * @param contractSymbol contract symbol
+     * @param symbol contract symbol
      * @param buy buy or sell
      * @param amount amount
      * @return [Order] object
      */
     @Throws(PriceNotAvailableException::class)
-    fun placeOrder(contractSymbol: String, buy: Boolean, amount: Double): Order
+    fun placeOrder(symbol: String, buy: Boolean, amount: Double): Order
 
     /**
      * Close existing order

@@ -44,7 +44,7 @@ interface Strategy {
      * @param buy      true of buy, false if sell
      * @return size of the lot
      */
-    fun getLotSize(contract: String?, buy: Boolean): Int
+    fun getLotSize(contract: String, buy: Boolean): Int
 
     /**
      * Checks if common criterion is met for current tick.

@@ -27,10 +27,9 @@ class TestConfig : AbstractModule() {
 
     @Provides
     @Throws(SQLException::class, ClassNotFoundException::class)
-    fun tradingContext(controller: ApiController?): TradingContext {
+    fun tradingContext(controller: ApiController): TradingContext {
         return IbTradingContext(
-            controller!!,
-            ContractBuilder(),
+            controller,
             OrderType.MKT,
             2
         )
