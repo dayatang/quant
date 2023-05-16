@@ -22,7 +22,7 @@ class IbMarketDataObserver(override val symbol: String) : MarketDataObserver {
         if (price == -1.0) { // do not update price with bogus value when market is about ot be closed
             return
         }
-        val realPrice: Double = ContractBuilder.Companion.getSymbolPrice(symbol, price)
+        val realPrice: Double = ContractBuilder.getSymbolPrice(symbol, price)
         priceSubject.onNext(Price(tickType, realPrice))
     }
 

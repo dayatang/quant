@@ -1,6 +1,5 @@
 package io.codera.quant.context
 
-import com.google.common.base.Preconditions
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.ib.client.*
@@ -31,11 +30,10 @@ import kotlin.math.abs
 /**
  * Interactive Brokers trading context.
  */
-class IbTradingContext private constructor(
+class IbTradingContext(
     private val controller: ApiController,
-    private val contractBuilder: ContractBuilder,
-    override val leverage: Double,
-    private var orderType: OrderType
+    private var orderType: OrderType,
+    override val leverage: Number,
 ) : TradingContext {
     override var contracts: MutableList<String> = ArrayList()
     private var ibContracts: MutableMap<String, Contract> = HashMap()
@@ -47,14 +45,9 @@ class IbTradingContext private constructor(
         private set
     override var netValue = 0.0
         private set
-    private var connection: Connection? = null
+    private var dbConnection: Connection? = null
 
-    constructor(
-        controller: ApiController,
-        contractBuilder: ContractBuilder,
-        orderType: OrderType,
-        leverage: Int
-    ) : this(controller, contractBuilder, leverage.toDouble(), orderType) {
+    init {
         contracts = Lists.newArrayList()
         contractPrices = Maps.newConcurrentMap()
         observers = Maps.newConcurrentMap()
@@ -70,91 +63,79 @@ class IbTradingContext private constructor(
 
     constructor(
         controller: ApiController,
-        contractBuilder: ContractBuilder,
         orderType: OrderType,
         connection: Connection?,
-        leverage: Int
-    ) : this(controller, contractBuilder, orderType, leverage) {
-        this.connection = connection
+        leverage: Number
+    ) : this(controller, orderType, leverage) {
+        this.dbConnection = connection
     }
 
     @Throws(PriceNotAvailableException::class)
-    override fun getLastPrice(contract: String): Double {
-        Preconditions.checkArgument(contract != null, "contract is null")
-        if (!contractPrices.containsKey(contract) ||
-            !contractPrices[contract]!!.containsKey(TickType.ASK)
-        ) {
-            throw PriceNotAvailableException()
-        }
-        val price = contractPrices[contract]!![TickType.ASK]!!
-        if (connection != null) {
+    override fun getLastPrice(symbol: String): Double {
+        val price = contractPrices[symbol]?.get(TickType.ASK)?: throw PriceNotAvailableException()
+        if (dbConnection != null) {
             try {
                 val sql = "INSERT INTO quotes (symbol, price) VALUES (?, ?)"
-                val stmt = connection!!.prepareStatement(sql)
-                stmt.setString(1, contract)
+                val stmt = dbConnection!!.prepareStatement(sql)
+                stmt.setString(1, symbol)
                 stmt.setDouble(2, price)
                 stmt.execute()
             } catch (e: SQLException) {
-                log.error("Could not insert record into database: $contract - $price", e)
+                log.error("Could not insert record into database: $symbol - $price", e)
             }
         }
-        return contractPrices[contract]!![TickType.ASK]!!
+        return price
     }
 
     @Throws(PriceNotAvailableException::class)
-    fun getLastPrice(contract: String?, tickType: TickType?): Double {
-        Preconditions.checkArgument(contract != null, "contract is null")
-        Preconditions.checkArgument(tickType != null, "tickType is null")
-        if (!contractPrices.containsKey(contract) || !contractPrices[contract]!!.containsKey(tickType)) {
-            throw PriceNotAvailableException()
-        }
-        return contractPrices[contract]!![tickType]!!
-    }
+    fun getLastPrice(contract: String, tickType: TickType): Double =
+        contractPrices[contract]?.get(tickType)?: throw PriceNotAvailableException()
 
-    override fun addContract(contractSymbol: String) {
-        contracts.add(contractSymbol)
-        val marketDataObserver = IbMarketDataObserver(contractSymbol)
-        observers[contractSymbol] = marketDataObserver
-        val contract = contractBuilder.build(contractSymbol)
-        ibContracts[contractSymbol] = contract
-        controller.reqTopMktData(contract, "", false, false, marketDataObserver)
+    override fun addContract(symbol: String) {
+        contracts.add(symbol)
+        val contract = ContractBuilder.build(symbol)
+        ibContracts[symbol] = contract
+        val marketDataObserver = IbMarketDataObserver(symbol)
+        observers[symbol] = marketDataObserver
+        controller.reqTopMktData(contract, "",
+            false, false, marketDataObserver)
         marketDataObserver.priceObservable().subscribe(object : Subscriber<Price>() {
             override fun onCompleted() {}
             override fun onError(throwable: Throwable) {}
             override fun onNext(price: Price) {
-                if (contractPrices.containsKey(contractSymbol)) {
-                    contractPrices[contractSymbol]!![price.tickType] = price.price
+                if (contractPrices.containsKey(symbol)) {
+                    contractPrices[symbol]!![price.tickType] = price.price
                 } else {
                     val map: MutableMap<TickType, Double> = Maps.newConcurrentMap()
                     map[price.tickType] = price.price
-                    contractPrices[contractSymbol] = map
+                    contractPrices[symbol] = map
                 }
             }
         })
     }
 
-    override fun removeContract(contractSymbol: String) {
-        contracts.remove(contractSymbol)
-        contractPrices.remove(contractSymbol)
-        ibContracts.remove(contractSymbol)
-        controller.cancelTopMktData(observers[contractSymbol])
+    override fun removeContract(symbol: String) {
+        contracts.remove(symbol)
+        contractPrices.remove(symbol)
+        ibContracts.remove(symbol)
+        controller.cancelTopMktData(observers[symbol])
     }
 
-    override fun getObserver(contractSymbol: String): MarketDataObserver {
-        return observers[contractSymbol]!!
+    override fun getObserver(symbol: String): MarketDataObserver {
+        return observers[symbol]!!
     }
 
     @Throws(PriceNotAvailableException::class)
-    override fun placeOrder(contractSymbol: String, buy: Boolean, amount: Double): Order {
+    override fun placeOrder(symbol: String, buy: Boolean, amount: Double): Order {
         val order = IbOrder(
             orderId.getAndIncrement(),
-            contractSymbol,
+            symbol,
             Instant.now(),
-            getLastPrice(contractSymbol),
+            getLastPrice(symbol),
             if (buy) amount else -amount,
-            submitIbOrder(contractSymbol, buy, amount, getLastPrice(contractSymbol))
+            submitIbOrder(symbol, buy, amount, getLastPrice(symbol))
         )
-        ibOrders[contractSymbol] = order
+        ibOrders[symbol] = order
         return order
     }
 
@@ -196,8 +177,7 @@ class IbTradingContext private constructor(
     override fun getHistory(symbol: String, daysOfHistory: Int): DoubleSeries {
         val formatter = DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss")
         val date = LocalDateTime.now().format(formatter)
-        val contractBuilder = ContractBuilder()
-        val contract = contractBuilder.build(symbol)
+        val contract = ContractBuilder.build(symbol)
         val historyObserver = IbHistoryObserver(symbol)
         controller.reqHistoricalData(
             contract, date, daysOfHistory, Types.DurationUnit.DAY,
@@ -211,8 +191,7 @@ class IbTradingContext private constructor(
     override fun getHistoryInMinutes(symbol: String, numberOfMinutes: Int): DoubleSeries {
         val formatter = DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss")
         val date = LocalDateTime.now().format(formatter)
-        val contractBuilder = ContractBuilder()
-        val contract = contractBuilder.build(symbol)
+        val contract = ContractBuilder.build(symbol)
         val historyObserver: HistoryObserver = IbHistoryObserver(symbol)
         controller.reqHistoricalData(
             contract, date, numberOfMinutes * 60, Types.DurationUnit.SECOND,
@@ -312,13 +291,12 @@ class IbTradingContext private constructor(
     }
 
     @Throws(PriceNotAvailableException::class)
-    fun getChangeBySymbol(symbol: String?, price: Double): Double {
+    fun getChangeBySymbol(symbol: String, price: Double): Double {
         val closePrice = getLastPrice(symbol, TickType.CLOSE)
         val diff = BigDecimal.valueOf(price).add(BigDecimal.valueOf(-closePrice))
         val res = diff.multiply(BigDecimal.valueOf(100))
             .divide(BigDecimal.valueOf(closePrice), RoundingMode.HALF_UP)
-        val rounded = res.setScale(2, RoundingMode.HALF_UP)
-        return rounded.toDouble()
+        return res.setScale(2, RoundingMode.HALF_UP).toDouble()
     }
 
     companion object {

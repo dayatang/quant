@@ -6,6 +6,7 @@ import io.codera.quant.exception.PriceNotAvailableException
 import io.codera.quant.strategy.*
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Bollinger bands strategy
@@ -14,14 +15,14 @@ class BollingerBandsStrategy(
     private val firstSymbol: String, private val secondSymbol: String,
     tradingContext: TradingContext, private val zScore: ZScore
 ) : AbstractStrategy(tradingContext) {
-    override fun getLotSize(contract: String?, buy: Boolean): Int {
+    override fun getLotSize(contract: String, buy: Boolean): Int {
         return 0
     }
 
     @Throws(PriceNotAvailableException::class)
     override fun openPosition() {
         val hedgeRatio = abs(zScore.hedgeRatio)
-        val baseAmount = (tradingContext.netValue * 0.5 * Math.min(4.0, tradingContext.leverage)
+        val baseAmount = (tradingContext.netValue * 0.5 * min(4.0, tradingContext.leverage.toDouble())
                 / (tradingContext.getLastPrice(secondSymbol) + hedgeRatio * tradingContext.getLastPrice(firstSymbol)))
         tradingContext.placeOrder(
             firstSymbol, zScore.lastCalculatedZScore < 0,

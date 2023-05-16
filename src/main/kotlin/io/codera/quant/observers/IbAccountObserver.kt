@@ -21,12 +21,12 @@ class IbAccountObserver : AccountObserver {
     }
 
     override fun setNetValue(netValue: Double) {
-        AccountObserver.Companion.logger.debug("Setting net value")
+        AccountObserver.logger.debug("Setting net value")
         netValueSubject.onNext(netValue)
     }
 
     override fun updateSymbolPosition(symbol: String, position: Decimal) {
-        AccountObserver.Companion.logger.info("{} position: {}", symbol, position)
+        AccountObserver.logger.info("{} position: {}", symbol, position)
     }
 
     fun observableCashBalance(): Observable<Double> {

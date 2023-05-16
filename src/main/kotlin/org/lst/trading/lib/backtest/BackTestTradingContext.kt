@@ -54,11 +54,11 @@ class BackTestTradingContext : TradingContext {
             .map { t -> TimeSeries.Entry(t.item[index], t.instant) }
     }
 
-    override fun addContract(contract: String) {
+    override fun addContract(symbol: String) {
         throw UnsupportedOperationException()
     }
 
-    override fun removeContract(contract: String) {
+    override fun removeContract(symbol: String) {
         throw UnsupportedOperationException()
     }
 

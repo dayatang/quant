@@ -12,6 +12,9 @@ import org.lst.trading.lib.series.MultipleDoubleSeries
 import org.lst.trading.main.strategy.kalman.Cointegration
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
+import kotlin.math.abs
+import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
  * Kalman filter strategy
@@ -50,9 +53,9 @@ class KalmanFilterStrategy(
     @Throws(PriceNotAvailableException::class)
     override fun openPosition() {
         tradingContext.placeOrder(secondSymbol, cointegration.error < 0, baseAmount)
-        Strategy.Companion.log.debug("Order of {} in amount {}", secondSymbol, baseAmount)
+        Strategy.log.debug("Order of {} in amount {}", secondSymbol, baseAmount)
         tradingContext.placeOrder(firstSymbol, cointegration.error > 0, baseAmount * beta)
-        Strategy.Companion.log.debug("Order of {} in amount {}", firstSymbol, baseAmount * beta)
+        Strategy.log.debug("Order of {} in amount {}", firstSymbol, baseAmount * beta)
     }
 
     @Throws(PriceNotAvailableException::class)
@@ -69,7 +72,7 @@ class KalmanFilterStrategy(
         }
     }
 
-    override fun getLotSize(contract: String?, buy: Boolean): Int {
+    override fun getLotSize(contract: String, buy: Boolean): Int {
         throw UnsupportedOperationException()
     }
 
@@ -100,8 +103,8 @@ class KalmanFilterStrategy(
                     var x = entry.item[0]
                     var y = entry.item[1]
                     if (firstSymbol.contains("=F") && secondSymbol.contains("=F")) {
-                        x = x * ContractBuilder.Companion.getFutureMultiplier(firstSymbol)!!
-                        y = y * ContractBuilder.Companion.getFutureMultiplier(secondSymbol)!!
+                        x *= ContractBuilder.getFutureMultiplier(firstSymbol)
+                        y *= ContractBuilder.getFutureMultiplier(secondSymbol)
                     }
                     cointegration.step(x, y)
                     val error = cointegration.error
@@ -116,37 +119,37 @@ class KalmanFilterStrategy(
         @get:Throws(CriterionViolationException::class)
         override val isMet: Boolean
             get() {
-                Strategy.Companion.log.debug("Evaluating ErrorIsMoreThanStandardDeviationEntry criteria")
+                Strategy.log.debug("Evaluating ErrorIsMoreThanStandardDeviationEntry criteria")
                 var x: Double
                 try {
                     x = tradingContext.getLastPrice(firstSymbol)
-                    Strategy.Companion.log.info("Current {} price {}", firstSymbol, x)
+                    Strategy.log.info("Current {} price {}", firstSymbol, x)
                 } catch (e: PriceNotAvailableException) {
-                    Strategy.Companion.log.error("Price for $firstSymbol is not available.")
+                    Strategy.log.error("Price for $firstSymbol is not available.")
                     return false
                 }
                 var y: Double
                 try {
                     y = tradingContext.getLastPrice(secondSymbol)
-                    Strategy.Companion.log.info("Current {} price {}", secondSymbol, y)
+                    Strategy.log.info("Current {} price {}", secondSymbol, y)
                 } catch (e: PriceNotAvailableException) {
-                    Strategy.Companion.log.error("Price for $secondSymbol is not available.")
+                    Strategy.log.error("Price for $secondSymbol is not available.")
                     return false
                 }
                 beta = cointegration.beta
                 if (firstSymbol.contains("=F") && secondSymbol.contains("=F")) {
-                    x = x * ContractBuilder.Companion.getFutureMultiplier(firstSymbol)!!
-                    y = y * ContractBuilder.Companion.getFutureMultiplier(secondSymbol)!!
+                    x *= ContractBuilder.getFutureMultiplier(firstSymbol)
+                    y *= ContractBuilder.getFutureMultiplier(secondSymbol)
                 }
                 cointegration.step(x, y)
                 val error = cointegration.error
                 errorQueue.add(error)
-                Strategy.Companion.log.debug("Error Queue size: {}", errorQueue.size)
+                Strategy.log.debug("Error Queue size: {}", errorQueue.size)
                 if (errorQueue.size > errorQueueSize + 1) {
                     errorQueue.poll()
                 }
                 if (errorQueue.size > errorQueueSize) {
-                    Strategy.Companion.log.debug("Kalman filter queue is > $errorQueueSize")
+                    Strategy.log.debug("Kalman filter queue is > $errorQueueSize")
                     val errors: Array<Any> = errorQueue.toTypedArray()
                     val lastValues = DoubleArray(errorQueueSize / 2)
                     var i = errors.size - 1
@@ -156,12 +159,12 @@ class KalmanFilterStrategy(
                         i--
                         lastValIndex++
                     }
-                    sd = Math.sqrt(StatUtils.variance(lastValues))
+                    sd = sqrt(StatUtils.variance(lastValues))
                     val realSd = sdMultiplier * sd
-                    Strategy.Companion.log.info("error={}, sd={}", error, realSd)
-                    if (Math.abs(error) > realSd) {
-                        Strategy.Companion.log.debug("error is bigger than square root of standard deviation")
-                        Strategy.Companion.log.debug("Net value {}", tradingContext.netValue)
+                    Strategy.log.info("error={}, sd={}", error, realSd)
+                    if (abs(error) > realSd) {
+                        Strategy.log.debug("error is bigger than square root of standard deviation")
+                        Strategy.log.debug("Net value {}", tradingContext.netValue)
                         if (secondSymbol.contains("=F")) {
                             //Exchange	Underlying	Product description	Trading Class	Intraday Initial 1	Intraday Maintenance 1	Overnight Initial	Overnight Maintenance	Currency	Has Options
                             //GLOBEX	ES	E-mini S&P 500	                          ES	3665	    2932	7330	5864	USD
@@ -170,9 +173,9 @@ class KalmanFilterStrategy(
                             baseAmount = 4.0
                             beta = 1.0
                         } else {
-                            baseAmount = (tradingContext.netValue * 0.5 * Math.min(4.0, tradingContext.leverage)
+                            baseAmount = (tradingContext.netValue * 0.5 * min(4.0, tradingContext.leverage.toDouble())
                                     / (y + beta * x))
-                            Strategy.Companion.log.debug(
+                            Strategy.log.debug(
                                 "baseAmount={},  sd={}, beta={}",
                                 baseAmount,
                                 cointegration.error,
@@ -180,8 +183,8 @@ class KalmanFilterStrategy(
                             )
                         }
                         if (beta > 0 && baseAmount * beta >= 1) {
-                            Strategy.Companion.log.info("error={}, sd={}", error, realSd)
-                            Strategy.Companion.log.info("{} price {}; {} price {}", firstSymbol, x, secondSymbol, y)
+                            Strategy.log.info("error={}, sd={}", error, realSd)
+                            Strategy.log.info("{} price {}; {} price {}", firstSymbol, x, secondSymbol, y)
                             return true
                         }
                     }
@@ -200,15 +203,15 @@ class KalmanFilterStrategy(
         @get:Throws(CriterionViolationException::class)
         override val isMet: Boolean
             get() {
-                Strategy.Companion.log.debug("Evaluating KalmanFilterExitCriterion criteria")
+                Strategy.log.debug("Evaluating KalmanFilterExitCriterion criteria")
                 try {
-                    if (tradingContext.getLastOrderBySymbol(secondSymbol)!!.isLong &&
+                    if (tradingContext.getLastOrderBySymbol(secondSymbol).isLong &&
                         cointegration.error > sdMultiplier * sd ||
-                        tradingContext.getLastOrderBySymbol(secondSymbol)!!.isShort &&
+                        tradingContext.getLastOrderBySymbol(secondSymbol).isShort &&
                         cointegration.error < -sdMultiplier * sd
                     ) {
-                        Strategy.Companion.log.info("error={}, sd={}", cointegration.error, sd)
-                        Strategy.Companion.log.info(
+                        Strategy.log.info("error={}, sd={}", cointegration.error, sd)
+                        Strategy.log.info(
                             "{} price {}; {} price {}", firstSymbol, tradingContext.getLastPrice(
                                 firstSymbol
                             ),
@@ -217,10 +220,10 @@ class KalmanFilterStrategy(
                         return true
                     }
                 } catch (noOrderAvailable: NoOrderAvailableException) {
-                    Strategy.Companion.log.debug("No orders available for $secondSymbol")
+                    Strategy.log.debug("No orders available for $secondSymbol")
                     return false
                 } catch (e: PriceNotAvailableException) {
-                    Strategy.Companion.log.debug("No price available for some symbol")
+                    Strategy.log.debug("No price available for some symbol")
                     return false
                 }
                 return false

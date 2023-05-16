@@ -28,7 +28,7 @@ class IbHistoryObserver(private val symbol: String) : HistoryObserver {
         if (dt.minuteOfDay().get() >= 390 && dt.minuteOfDay().get() <= 390 + 390) {
             logger.debug("{} {} {}", bar.formattedTime(), symbol, bar.close())
             doubleSeries!!.add(
-                ContractBuilder.Companion.getSymbolPrice(symbol, bar.close()),
+                ContractBuilder.getSymbolPrice(symbol, bar.close()),
                 Instant.ofEpochMilli(
                     LocalDateTime(bar.time() * 1000).toDateTime(DateTimeZone.UTC)
                         .millis

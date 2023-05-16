@@ -82,10 +82,9 @@ object Helper {
     ): MultipleDoubleSeries {
         val formatter = DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss")
         val date = LocalDateTime.now().format(formatter)
-        val contractBuilder = ContractBuilder()
         val doubleSeries: MutableList<DoubleSeries> = Lists.newArrayList()
         for (symbol in symbols) {
-            val contract = contractBuilder.build(symbol)
+            val contract = ContractBuilder.build(symbol)
             val historyObserver: HistoryObserver = IbHistoryObserver(symbol)
             controller.reqHistoricalData(
                 contract, date, daysOfHistory, Types.DurationUnit.DAY,
