@@ -9,10 +9,10 @@ import io.codera.quant.exception.CriterionViolationException
  * Abstract strategy class.
  */
 abstract class AbstractStrategy(override val tradingContext: TradingContext) : Strategy {
-    private var commonCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
-    private var entryCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
-    private var exitCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
-    private var stopLossCriteria: MutableList<Criterion?> = Lists.newCopyOnWriteArrayList()
+    private var commonCriteria: MutableList<Criterion> = Lists.newCopyOnWriteArrayList()
+    private var entryCriteria: MutableList<Criterion> = Lists.newCopyOnWriteArrayList()
+    private var exitCriteria: MutableList<Criterion> = Lists.newCopyOnWriteArrayList()
+    private var stopLossCriteria: MutableList<Criterion> = Lists.newCopyOnWriteArrayList()
     private var symbols: MutableList<String> = Lists.newLinkedList()
 
     override fun addEntryCriterion(criterion: Criterion) {
@@ -20,7 +20,7 @@ abstract class AbstractStrategy(override val tradingContext: TradingContext) : S
         entryCriteria.add(criterion)
     }
 
-    override fun removeEntryCriterion(criterion: Criterion?) {
+    override fun removeEntryCriterion(criterion: Criterion) {
         entryCriteria.remove(criterion)
     }
 
@@ -29,7 +29,7 @@ abstract class AbstractStrategy(override val tradingContext: TradingContext) : S
         commonCriteria.add(criterion)
     }
 
-    override fun removeCommonCriterion(criterion: Criterion?) {
+    override fun removeCommonCriterion(criterion: Criterion) {
         commonCriteria.remove(criterion)
     }
 
@@ -38,7 +38,7 @@ abstract class AbstractStrategy(override val tradingContext: TradingContext) : S
         exitCriteria.add(criterion)
     }
 
-    override fun removeExitCriterion(criterion: Criterion?) {
+    override fun removeExitCriterion(criterion: Criterion) {
         exitCriteria.remove(criterion)
     }
 
@@ -47,12 +47,11 @@ abstract class AbstractStrategy(override val tradingContext: TradingContext) : S
     override val isEntryCriteriaMet: Boolean
         get() = testCriteria(entryCriteria)
     override val isExitCriteriaMet: Boolean
-        get() = !exitCriteria.isEmpty() && testCriteria(exitCriteria)
+        get() = exitCriteria.isNotEmpty() && testCriteria(exitCriteria)
     override val isStopLossCriteriaMet: Boolean
         get() = !stopLossCriteria.isEmpty() && testCriteria(stopLossCriteria)
 
-    override fun addStopLossCriterion(criterion: Criterion?) {
-        Preconditions.checkArgument(criterion != null, "criterion is null")
+    override fun addStopLossCriterion(criterion: Criterion) {
         stopLossCriteria.add(criterion)
     }
 
@@ -66,8 +65,8 @@ abstract class AbstractStrategy(override val tradingContext: TradingContext) : S
         tradingContext.addContract(symbol)
     }
 
-    private fun testCriteria(criteria: List<Criterion?>): Boolean {
-        if (criteria.size == 0) {
+    private fun testCriteria(criteria: List<Criterion>): Boolean {
+        if (criteria.isEmpty()) {
             return true
         }
         for (criterion in criteria) {

@@ -21,28 +21,22 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.stream.Stream
 
-class YahooFinance : HistoricalPriceService {
-    private var connection: Connection? = null
+class YahooFinance(private val connection: Connection? = null) : HistoricalPriceService {
 
-    constructor()
-    constructor(connection: Connection?) {
-        this.connection = connection
-    }
-
-    override fun getHistoricalAdjustedPrices(symbol: String): Observable<DoubleSeries?> {
+    override fun getHistoricalAdjustedPrices(symbol: String): Observable<DoubleSeries> {
         return getHistoricalAdjustedPrices(symbol, DEFAULT_FROM.toInstant())
     }
 
-    fun getHistoricalAdjustedPrices(symbol: String, from: Instant): Observable<DoubleSeries?> {
+    fun getHistoricalAdjustedPrices(symbol: String, from: Instant): Observable<DoubleSeries> {
         return getHistoricalAdjustedPrices(symbol, from, Instant.now())
     }
 
-    fun getHistoricalAdjustedPrices(symbol: String, from: Instant, to: Instant): Observable<DoubleSeries?> {
+    fun getHistoricalAdjustedPrices(symbol: String, from: Instant, to: Instant): Observable<DoubleSeries> {
         return getHistoricalPricesCsv(symbol, from, to).map { csv: String -> csvToDoubleSeries(csv, symbol) }
     }
 
     @Throws(IOException::class)
-    fun readCsvToDoubleSeries(csvFilePath: String?, symbol: String): DoubleSeries? {
+    fun readCsvToDoubleSeries(csvFilePath: String, symbol: String): DoubleSeries {
         val lines = Files.lines(Paths.get(csvFilePath))
         var prices = CsvReader.parse(lines, SEP, DATE_COLUMN, ADJ_COLUMN)
         prices.name = symbol
@@ -62,10 +56,8 @@ class YahooFinance : HistoricalPriceService {
 
     @Throws(SQLException::class)
     fun readSeriesFromDb(symbol: String): DoubleSeries {
-        if (connection == null) {
-            return DoubleSeries(symbol)
-        }
-        val stmt = connection!!.createStatement()
+        if (connection == null) return DoubleSeries(symbol)
+        val stmt = connection.createStatement()
         val rs = stmt.executeQuery(String.format("SELECT * FROM quotes WHERE symbol='%s'", symbol))
         val doubleSeries = DoubleSeries(symbol)
         while (rs.next()) {
@@ -119,11 +111,12 @@ class YahooFinance : HistoricalPriceService {
         private val log = LoggerFactory.getLogger(YahooFinance::class.java)
         private fun getHistoricalPricesCsv(symbol: String, from: Instant, to: Instant): Observable<String> {
             return Http.get(createHistoricalPricesUrl(symbol, from, to))
-                .flatMap<String>(Http.asString())
+                .flatMap(Http.asString())
         }
 
         private fun csvToDoubleSeries(csv: String, symbol: String): DoubleSeries {
-            val lines = Stream.of(*csv.split("\n".toRegex()).dropLastWhile { it.isEmpty() }
+            val lines = Stream.of(*csv.split("\n".toRegex())
+                .dropLastWhile(String::isEmpty)
                 .toTypedArray())
             var prices = CsvReader.parse(lines, SEP, DATE_COLUMN, ADJ_COLUMN)
             prices.name = symbol
@@ -132,24 +125,19 @@ class YahooFinance : HistoricalPriceService {
         }
 
         private fun createHistoricalPricesUrl(symbol: String, from: Instant, to: Instant): String {
-            return String.format(
-                "https://ichart.yahoo.com/table.csv?s=%s&%s&%s&g=d&ignore=.csv", symbol,
-                toYahooQueryDate(from, "abc"), toYahooQueryDate(to, "def")
-            )
+            return "https://ichart.yahoo.com/table.csv?s=$symbol&" +
+                    "${toYahooQueryDate(from, "abc")}&" +
+                    "${toYahooQueryDate(to, "def")}&g=d&ignore=.csv"
         }
 
         private fun toYahooQueryDate(instant: Instant, names: String): String {
             val time = instant.atOffset(ZoneOffset.UTC)
-            val strings = names.split("".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            return String.format(
-                "%s=%d&%s=%d&%s=%d",
-                strings[0],
-                time.monthValue - 1,
-                strings[1],
-                time.dayOfMonth,
-                strings[2],
-                time.year
-            )
+            val strings = names.split("".toRegex())
+                .dropLastWhile(String::isEmpty)
+                .toTypedArray()
+            return "${strings[0]}=${time.monthValue - 1}" +
+                    "&${strings[1]}=${time.dayOfMonth}" +
+                    "&${strings[2]}=${time.year}"
         }
     }
 }

@@ -8,43 +8,13 @@ import org.slf4j.LoggerFactory
  * Strategy interface.
  */
 interface Strategy {
-    /**
-     * Executed every time when new data is received.
-     * Drives placing trades based on loaded entry and exit criteria and lot sizes.
-     * This method will also update [object if run in backtest mode][BackTestResult].
-     */
-    fun onTick() {
-        if (isCommonCriteriaMet) {
-            if (isEntryCriteriaMet) {
-                try {
-                    openPosition()
-                } catch (e: PriceNotAvailableException) {
-                    log.error("Price for requested contract is not available")
-                }
-            } else if (isStopLossCriteriaMet) {
-                try {
-                    closePosition()
-                } catch (e: PriceNotAvailableException) {
-                    log.error("Price for requested contract is not available")
-                }
-            } else if (isExitCriteriaMet) {
-                try {
-                    closePosition()
-                } catch (e: PriceNotAvailableException) {
-                    log.error("Price for requested contract is not available")
-                }
-            }
-        }
-    }
 
     /**
-     * Calculates the lot size based on configured trade context and strategy logic.
+     * Returns strategy [TradingContext]
      *
-     * @param contract instrument/contract name
-     * @param buy      true of buy, false if sell
-     * @return size of the lot
+     * @return
      */
-    fun getLotSize(contract: String, buy: Boolean): Int
+    val tradingContext: TradingContext
 
     /**
      * Checks if common criterion is met for current tick.
@@ -66,20 +36,70 @@ interface Strategy {
      * @return true if met, false otherwise
      */
     val isExitCriteriaMet: Boolean
+
+    /**
+     * Checks if stop loss criterion is met for current tick.
+     *
+     * @return true if met, false otherwise
+     */
     val isStopLossCriteriaMet: Boolean
-        /**
-         * Checks if stop loss criterion is met for current tick.
-         *
-         * @return true if met, false otherwise
-         */
         get() = false
+
+    /**
+     * Returns additional data needed for back testing.
+     *
+     * @return [BackTestResult] object
+     */
+    val backTestResult: BackTestResult?
+
+    /**
+     * Executed every time when new data is received.
+     * Drives placing trades based on loaded entry and exit criteria and lot sizes.
+     * This method will also update [object if run in backtest mode][BackTestResult].
+     */
+    fun onTick() {
+        if (!isCommonCriteriaMet) return
+        if (isEntryCriteriaMet) {
+            try {
+                openPosition()
+            } catch (e: PriceNotAvailableException) {
+                log.error("Price for requested contract is not available")
+            }
+            return
+        }
+        if (isStopLossCriteriaMet) {
+            try {
+                closePosition()
+            } catch (e: PriceNotAvailableException) {
+                log.error("Price for requested contract is not available")
+            }
+            return
+        }
+        if (isExitCriteriaMet) {
+            try {
+                closePosition()
+            } catch (e: PriceNotAvailableException) {
+                log.error("Price for requested contract is not available")
+            }
+        }
+
+    }
+
+    /**
+     * Calculates the lot size based on configured trade context and strategy logic.
+     *
+     * @param contract instrument/contract name
+     * @param buy      true of buy, false if sell
+     * @return size of the lot
+     */
+    fun getLotSize(contract: String, buy: Boolean): Int
 
     /**
      * Adds stop loss criterion.
      *
      * @param criterion common criterion
      */
-    fun addStopLossCriterion(criterion: Criterion?) {}
+    fun addStopLossCriterion(criterion: Criterion) {}
 
     /**
      * Adds common criterion.
@@ -100,14 +120,14 @@ interface Strategy {
      *
      * @param criterion common criterion
      */
-    fun removeCommonCriterion(criterion: Criterion?)
+    fun removeCommonCriterion(criterion: Criterion)
 
     /**
      * Removes entry criterion.
      *
      * @param criterion entry criterion
      */
-    fun removeEntryCriterion(criterion: Criterion?)
+    fun removeEntryCriterion(criterion: Criterion)
 
     /**
      * Adds exit criterion.
@@ -121,14 +141,7 @@ interface Strategy {
      *
      * @param criterion exit criterion
      */
-    fun removeExitCriterion(criterion: Criterion?)
-
-    /**
-     * Returns additional data needed for back testing.
-     *
-     * @return [BackTestResult] object
-     */
-    val backTestResult: BackTestResult?
+    fun removeExitCriterion(criterion: Criterion)
 
     /**
      * Add symbol to run strategy against.
@@ -136,13 +149,6 @@ interface Strategy {
      * @param symbol contract symbol
      */
     fun addSymbol(symbol: String)
-
-    /**
-     * Returns strategy [TradingContext]
-     *
-     * @return
-     */
-    val tradingContext: TradingContext
 
     /**
      * Opens position in one or several contracts when entry [Criterion] is met.
