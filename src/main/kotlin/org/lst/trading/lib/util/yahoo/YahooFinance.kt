@@ -21,22 +21,33 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.stream.Stream
 
-class YahooFinance(private val connection: Connection? = null) : HistoricalPriceService {
+class YahooFinance(
+    private val connection: Connection? = null
+) : HistoricalPriceService {
 
-    override fun getHistoricalAdjustedPrices(symbol: String): Observable<DoubleSeries> {
+    override fun getHistoricalAdjustedPrices(
+        symbol: String
+    ): Observable<DoubleSeries> {
         return getHistoricalAdjustedPrices(symbol, DEFAULT_FROM.toInstant())
     }
 
-    fun getHistoricalAdjustedPrices(symbol: String, from: Instant): Observable<DoubleSeries> {
+    fun getHistoricalAdjustedPrices(
+        symbol: String, from: Instant
+    ): Observable<DoubleSeries> {
         return getHistoricalAdjustedPrices(symbol, from, Instant.now())
     }
 
-    fun getHistoricalAdjustedPrices(symbol: String, from: Instant, to: Instant): Observable<DoubleSeries> {
-        return getHistoricalPricesCsv(symbol, from, to).map { csv: String -> csvToDoubleSeries(csv, symbol) }
+    fun getHistoricalAdjustedPrices(
+        symbol: String, from: Instant, to: Instant
+    ): Observable<DoubleSeries> {
+        return getHistoricalPricesCsv(symbol, from, to)
+            .map { csv: String -> csvToDoubleSeries(csv, symbol) }
     }
 
     @Throws(IOException::class)
-    fun readCsvToDoubleSeries(csvFilePath: String, symbol: String): DoubleSeries {
+    fun readCsvToDoubleSeries(
+        csvFilePath: String, symbol: String
+    ): DoubleSeries {
         val lines = Files.lines(Paths.get(csvFilePath))
         var prices = CsvReader.parse(lines, SEP, DATE_COLUMN, ADJ_COLUMN)
         prices.name = symbol
@@ -45,7 +56,9 @@ class YahooFinance(private val connection: Connection? = null) : HistoricalPrice
     }
 
     @Throws(IOException::class, URISyntaxException::class)
-    fun readCsvToDoubleSeriesFromResource(csvResourcePath: String, symbol: String): DoubleSeries {
+    fun readCsvToDoubleSeriesFromResource(
+        csvResourcePath: String, symbol: String
+    ): DoubleSeries {
         val resourceUrl = getResource(csvResourcePath)
         val lines = Files.lines(Paths.get(resourceUrl.toURI()))
         var prices = CsvReader.parse(lines, SEP, DATE_COLUMN, ADJ_COLUMN)
@@ -58,10 +71,11 @@ class YahooFinance(private val connection: Connection? = null) : HistoricalPrice
     fun readSeriesFromDb(symbol: String): DoubleSeries {
         if (connection == null) return DoubleSeries(symbol)
         val stmt = connection.createStatement()
-        val rs = stmt.executeQuery(String.format("SELECT * FROM quotes WHERE symbol='%s'", symbol))
+        val rs = stmt.executeQuery("SELECT * FROM quotes WHERE symbol='$symbol'")
         val doubleSeries = DoubleSeries(symbol)
         while (rs.next()) {
-            doubleSeries.add(rs.getDouble(3), Instant.ofEpochMilli(rs.getTime(4).time))
+            doubleSeries.add(rs.getDouble(3),
+                Instant.ofEpochMilli(rs.getTime(4).time))
         }
         rs.close()
         stmt.close()
