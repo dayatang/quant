@@ -82,30 +82,10 @@ class YahooFinance(
         return doubleSeries
     }
 
-    private fun getResource(resource: String): URL {
-        var url: URL
-
-        //Try with the Thread Context Loader.
-        var classLoader = Thread.currentThread().contextClassLoader
-        if (classLoader != null) {
-            url = classLoader.getResource(resource)
-            if (url != null) {
-                return url
-            }
-        }
-
-        //Let's now try with the classloader that loaded this class.
-        classLoader = System::class.java.classLoader
-        if (classLoader != null) {
-            url = classLoader.getResource(resource)
-            if (url != null) {
-                return url
-            }
-        }
-
-        //Last ditch attempt. Get the resource from the classpath.
-        return ClassLoader.getSystemResource(resource)
-    }
+    private fun getResource(resource: String): URL =
+        Thread.currentThread().contextClassLoader?.getResource(resource)?: //Try with the Thread Context Loader.
+        System::class.java.classLoader?.getResource(resource)?: //Let's now try with the classloader that loaded this class.
+        ClassLoader.getSystemResource(resource) //Last ditch attempt. Get the resource from the classpath.
 
     companion object {
         const val SEP = ","
